@@ -1,15 +1,19 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:shiba/data/models/message.dart';
+import 'package:shiba/ui/chat/widgets/image_preview_page.dart';
 
-class MessageBubble extends StatefulWidget {
+class MessageBubble extends StatelessWidget {
   final Message message;
   final bool isStreaming;
   final VoidCallback? onEdit;
   final VoidCallback? onTtsPlay;
   final VoidCallback? onTtsStop;
   final bool isTtsPlaying;
+  final bool showActions;
+  final VoidCallback? onTap;
 
   const MessageBubble({
     super.key,
@@ -19,18 +23,13 @@ class MessageBubble extends StatefulWidget {
     this.onTtsPlay,
     this.onTtsStop,
     this.isTtsPlaying = false,
+    this.showActions = false,
+    this.onTap,
   });
 
   @override
-  State<MessageBubble> createState() => _MessageBubbleState();
-}
-
-class _MessageBubbleState extends State<MessageBubble> {
-  bool _showActions = false;
-
-  @override
   Widget build(BuildContext context) {
-    final isUser = widget.message.role == MessageRole.user;
+    final isUser = message.role == MessageRole.user;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
@@ -49,9 +48,7 @@ class _MessageBubbleState extends State<MessageBubble> {
               children: [
                 // Bubble
                 GestureDetector(
-                  onTap: widget.isStreaming
-                      ? null
-                      : () => setState(() => _showActions = !_showActions),
+                  onTap: isStreaming ? null : onTap,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
@@ -69,9 +66,42 @@ class _MessageBubbleState extends State<MessageBubble> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Image attachment
+                        if (message.hasImage)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ImagePreviewPage(
+                                      imagePath: message.imagePath!,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  File(message.imagePath!),
+                                  width: 200,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 200,
+                                    height: 100,
+                                    color: colorScheme.surfaceContainerHighest,
+                                    child: const Center(
+                                      child: Icon(Icons.broken_image_outlined),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         if (isUser)
                           Text(
-                            widget.message.content,
+                            message.content,
                             style: TextStyle(
                               color: colorScheme.onPrimaryContainer,
                               fontSize: 15,
@@ -79,7 +109,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                           )
                         else
                           _buildMarkdownContent(context),
-                        if (widget.isStreaming)
+                        if (isStreaming)
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: SizedBox(
@@ -97,7 +127,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                 ),
 
                 // Action buttons (shown on tap)
-                if (_showActions && !widget.isStreaming)
+                if (showActions && !isStreaming)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Row(
@@ -108,7 +138,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                           tooltip: '复制',
                           onTap: () {
                             Clipboard.setData(
-                                ClipboardData(text: widget.message.content));
+                                ClipboardData(text: message.content));
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('已复制到剪贴板'),
@@ -118,24 +148,24 @@ class _MessageBubbleState extends State<MessageBubble> {
                             );
                           },
                         ),
-                        if (isUser && widget.onEdit != null)
+                        if (isUser && onEdit != null)
                           _ActionBtn(
                             icon: Icons.edit_outlined,
                             tooltip: '编辑并重发',
-                            onTap: widget.onEdit!,
+                            onTap: onEdit!,
                           ),
                         // TTS read-aloud button (for assistant messages)
                         if (!isUser)
-                          widget.isTtsPlaying
+                          isTtsPlaying
                               ? _ActionBtn(
                                   icon: Icons.stop_circle_outlined,
                                   tooltip: '停止朗读',
-                                  onTap: widget.onTtsStop ?? () {},
+                                  onTap: onTtsStop ?? () {},
                                 )
                               : _ActionBtn(
                                   icon: Icons.volume_up_outlined,
                                   tooltip: '朗读',
-                                  onTap: widget.onTtsPlay ?? () {},
+                                  onTap: onTtsPlay ?? () {},
                                 ),
                       ],
                     ),
@@ -169,7 +199,7 @@ class _MessageBubbleState extends State<MessageBubble> {
   Widget _buildMarkdownContent(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return GptMarkdown(
-      widget.message.content,
+      message.content,
       style: TextStyle(
         color: colorScheme.onSurface,
         fontSize: 15,

@@ -18,7 +18,7 @@ class DatabaseHelper {
     final path = join(dbPath, AppConstants.dbName);
     return openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -46,6 +46,7 @@ class DatabaseHelper {
         conversation_id TEXT NOT NULL,
         role TEXT NOT NULL,
         content TEXT NOT NULL,
+        image_path TEXT,
         created_at INTEGER NOT NULL,
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
       )
@@ -91,6 +92,9 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE conversations ADD COLUMN top_k INTEGER NOT NULL DEFAULT 40');
       await db.execute('ALTER TABLE conversations ADD COLUMN top_p REAL NOT NULL DEFAULT 0.9');
       await db.execute('ALTER TABLE conversations ADD COLUMN max_tokens INTEGER NOT NULL DEFAULT 1024');
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE messages ADD COLUMN image_path TEXT');
     }
   }
 

@@ -15,8 +15,10 @@ class LlmService {
   LlamaEngine? _engine;
   LlamaBackend? _backend;
   bool _isLoaded = false;
+  bool _hasVision = false;
 
   bool get isLoaded => _isLoaded;
+  bool get hasVision => _hasVision;
 
   /// Lazily initialize the engine (and its backend isolate) once.
   Future<LlamaEngine> _ensureEngine() async {
@@ -45,6 +47,7 @@ class LlmService {
       _backend = null;
     }
     _isLoaded = false;
+    _hasVision = false;
   }
 
   /// Safely unload model, tolerating errors.
@@ -375,6 +378,7 @@ class LlmService {
     double topP = AppConstants.defaultTopP,
     int topK = AppConstants.defaultTopK,
     String systemPrompt = '',
+    String? imagePath,
   }) {
     final controller = StreamController<String>();
 
@@ -395,8 +399,14 @@ class LlmService {
       stopSequences: ['<|im_end|>', '<|end|>', '</s>', '<|eot_id|>'],
     );
 
+    // Build multimodal parts if image is provided
+    List<LlamaContentPart>? parts;
+    if (imagePath != null && _hasVision) {
+      parts = [LlamaImageContent(path: imagePath)];
+    }
+
     StreamSubscription<String>? sub;
-    sub = _engine!.generate(prompt, params: params).listen(
+    sub = _engine!.generate(prompt, params: params, parts: parts).listen(
       (token) {
         if (!controller.isClosed) {
           controller.add(token);
@@ -485,11 +495,35 @@ class LlmService {
     _engine?.cancelGeneration();
   }
 
+  /// Load a multimodal projector (mmproj) for vision support.
+  /// Call after loadModel succeeds. The mmproj file is typically
+  /// named like `mmproj-model-f16.gguf` in the same repo.
+  Future<(bool, String?)> loadVisionProjector(String mmProjPath) async {
+    if (!_isLoaded || _engine == null) {
+      return (false, 'Model not loaded');
+    }
+    try {
+      final file = File(mmProjPath);
+      if (!await file.exists()) {
+        return (false, 'Vision projector file not found: $mmProjPath');
+      }
+      await _engine!.loadMultimodalProjector(mmProjPath);
+      _hasVision = true;
+      debugPrint('[LLM] Vision projector loaded: ${mmProjPath.split('/').last}');
+      return (true, null);
+    } catch (e) {
+      debugPrint('[LLM] Failed to load vision projector: $e');
+      _hasVision = false;
+      return (false, 'Vision projector load failed: $e');
+    }
+  }
+
   /// Unload the current model but keep the engine/backend alive.
   Future<void> unloadModel() async {
     if (_engine != null && _isLoaded) {
       await _safeUnload(_engine!);
       _isLoaded = false;
+      _hasVision = false;
     }
   }
 

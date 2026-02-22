@@ -99,7 +99,7 @@ class MessagesNotifier extends AsyncNotifier<List<Message>> {
         await ref.read(conversationRepoProvider).getMessages(convId));
   }
 
-  Future<Message> addUserMessage(String content) async {
+  Future<Message> addUserMessage(String content, {String? imagePath}) async {
     final convId = ref.read(currentConversationIdProvider);
     if (convId == null) throw Exception('No conversation selected');
     final message = Message(
@@ -107,6 +107,7 @@ class MessagesNotifier extends AsyncNotifier<List<Message>> {
       conversationId: convId,
       role: MessageRole.user,
       content: content,
+      imagePath: imagePath,
       createdAt: DateTime.now(),
     );
     await ref.read(conversationRepoProvider).insertMessage(message);
@@ -146,6 +147,9 @@ class MessagesNotifier extends AsyncNotifier<List<Message>> {
 /// Whether the AI is currently generating a response
 final isGeneratingProvider = StateProvider<bool>((ref) => false);
 
+/// Pending image path for the next message (set by image picker, cleared on send)
+final pendingImageProvider = StateProvider<String?>((ref) => null);
+
 /// Streaming response text (accumulated)
 final streamingTextProvider = StateProvider<String>((ref) => '');
 
@@ -162,7 +166,7 @@ class ChatController {
 
   ChatController(this._ref);
 
-  Future<void> sendMessage(String content) async {
+  Future<void> sendMessage(String content, {String? imagePath}) async {
     final llmService = _ref.read(llmServiceProvider);
     final selectedModel = _ref.read(selectedModelProvider);
 
@@ -175,7 +179,7 @@ class ChatController {
     _buffer.clear();
 
     // Add user message
-    await _ref.read(messagesProvider.notifier).addUserMessage(content);
+    await _ref.read(messagesProvider.notifier).addUserMessage(content, imagePath: imagePath);
 
     // Read conversation-level settings
     final convId = _ref.read(currentConversationIdProvider)!;
@@ -194,6 +198,7 @@ class ChatController {
       topP: conv?.topP ?? AppConstants.defaultTopP,
       topK: conv?.topK ?? AppConstants.defaultTopK,
       systemPrompt: conv?.systemPrompt ?? '',
+      imagePath: imagePath,
     );
 
     _subscription = stream.listen(

@@ -101,8 +101,6 @@ final hfModelFilesProvider =
 ///
 /// Android: parses /proc/meminfo for MemTotal.
 /// iOS/other: falls back to a conservative 4 GB estimate.
-/// The usable limit for model loading is ~60% of total RAM
-/// (the rest is reserved for OS, other apps, and KV cache overhead).
 final deviceMemoryProvider = FutureProvider<int>((ref) async {
   int totalBytes = 4 * 1024 * 1024 * 1024; // 4 GB fallback
 
@@ -116,7 +114,5 @@ final deviceMemoryProvider = FutureProvider<int>((ref) async {
     } catch (_) {}
   }
 
-  // ~60% of total RAM is a safe upper bound for model file size.
-  // The remaining 40% covers OS, background apps, and KV cache overhead.
-  return (totalBytes * 0.6).round();
+  return totalBytes;
 });

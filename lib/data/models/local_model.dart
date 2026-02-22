@@ -96,12 +96,13 @@ class LocalModel {
   LocalModel copyWith({
     int? downloadedSize,
     ModelStatus? status,
+    String? filePath,
   }) =>
       LocalModel(
         id: id,
         repoId: repoId,
         filename: filename,
-        filePath: filePath,
+        filePath: filePath ?? this.filePath,
         fileSize: fileSize,
         downloadedSize: downloadedSize ?? this.downloadedSize,
         status: status ?? this.status,

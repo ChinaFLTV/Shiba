@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/core/constants.dart';
 import 'package:shiba/data/models/conversation.dart';
+import 'package:shiba/data/models/local_model.dart';
 import 'package:shiba/data/models/message.dart';
 import 'package:shiba/data/services/tts_service.dart';
 import 'package:shiba/providers/chat_providers.dart';
+import 'package:shiba/providers/image_settings_provider.dart';
 import 'package:shiba/providers/model_providers.dart';
 import 'package:shiba/providers/service_providers.dart';
 import 'package:shiba/providers/tts_providers.dart';
@@ -25,8 +27,12 @@ class ChatPage extends ConsumerStatefulWidget {
 
 class _ChatPageState extends ConsumerState<ChatPage> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<ChatInputBarState> _inputBarKey = GlobalKey();
   bool _modelLoading = false;
   String? _loadError;
+  String? _expandedMessageId;
+  /// Message pending edit-and-resend (set when user taps edit, cleared on send).
+  Message? _editPendingMessage;
   /// Cached reference to TtsService for use in dispose() where ref is unavailable.
   late final TtsService _ttsService;
   /// Cached notifier references for cleanup in dispose().
@@ -89,11 +95,51 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         _modelLoading = false;
         if (success) {
           _loadError = null;
+          // Try to load vision projector if available
+          _tryLoadVisionProjector(llmService, selectedModel.repoId);
         } else {
           _loadError = _buildLoadErrorMessage(error, selectedModel.filePath);
         }
       });
     }
+  }
+
+  /// Attempt to find and load a mmproj file for vision support.
+  /// Searches downloaded models from the same repo for mmproj files.
+  Future<void> _tryLoadVisionProjector(dynamic llmService, String repoId) async {
+    final models = await ref.read(modelRepoProvider).getCompletedModels();
+    final mmproj = models.where((m) =>
+        m.repoId == repoId &&
+        m.filename.toLowerCase().contains('mmproj') &&
+        m.status == ModelStatus.completed).firstOrNull;
+    if (mmproj != null) {
+      final file = File(mmproj.filePath);
+      if (await file.exists()) {
+        await llmService.loadVisionProjector(mmproj.filePath);
+        if (mounted) setState(() {}); // refresh UI to show image button
+        return;
+      }
+    }
+    // Show hint if model looks multimodal but mmproj is missing
+    if (_looksMultimodal(repoId) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('该模型支持图片输入，但缺少视觉投影器(mmproj)文件，请在模型仓库中下载对应的 mmproj 文件'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 6),
+        ),
+      );
+    }
+  }
+
+  /// Heuristic check if a repo likely contains a multimodal (vision) model.
+  static bool _looksMultimodal(String repoId) {
+    final lower = repoId.toLowerCase();
+    return lower.contains('-vl') ||
+        lower.contains('vision') ||
+        lower.contains('multimodal') ||
+        lower.contains('llava') ||
+        lower.contains('minicpm-v');
   }
 
   void _scrollToBottom() {
@@ -302,6 +348,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         isTtsPlaying: ttsPlayingId == msg.id,
                         onTtsPlay: () => _handleTtsPlay(msg),
                         onTtsStop: () => _handleTtsStop(),
+                        showActions: _expandedMessageId == msg.id,
+                        onTap: () {
+                          setState(() {
+                            _expandedMessageId =
+                                _expandedMessageId == msg.id ? null : msg.id;
+                          });
+                        },
                       );
                     }
                     // Streaming message
@@ -325,14 +378,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
           // Input bar
           ChatInputBar(
+            key: _inputBarKey,
             enabled: !_modelLoading && _loadError == null,
             isGenerating: isGenerating,
-            onSend: (text) {
-              ref.read(chatControllerProvider).sendMessage(text);
-              _scrollToBottom();
-            },
+            visionEnabled: ref.watch(llmServiceProvider).hasVision,
+            pendingImagePath: ref.watch(pendingImageProvider),
+            imageCompressEnabled: ref.watch(imageSettingsProvider).compressEnabled,
+            imageMaxResolution: ref.watch(imageSettingsProvider).maxResolution,
+            imageQuality: ref.watch(imageSettingsProvider).quality,
+            onSend: (text, {String? imagePath}) => _handleSend(text, imagePath: imagePath),
             onStop: () {
               ref.read(chatControllerProvider).stopGeneration();
+            },
+            onImageChanged: (path) {
+              ref.read(pendingImageProvider.notifier).state = path;
             },
           ),
         ],
@@ -420,33 +479,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _editAndResend(Message message) async {
-    final controller = TextEditingController(text: message.content);
-    final newContent = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('编辑消息'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: '编辑后将删除此消息及后续对话并重新发送',
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('重新发送')),
-        ],
-      ),
+    setState(() => _editPendingMessage = message);
+    _inputBarKey.currentState?.prefill(
+      message.content,
+      imagePath: message.imagePath,
     );
-    if (newContent != null && newContent.isNotEmpty) {
-      await ref.read(messagesProvider.notifier).deleteMessagesFrom(message);
-      ref.read(chatControllerProvider).sendMessage(newContent);
+  }
+
+  /// Called when the user sends from the input bar while an edit is pending.
+  void _handleSend(String text, {String? imagePath}) {
+    if (_editPendingMessage != null) {
+      final pending = _editPendingMessage!;
+      setState(() => _editPendingMessage = null);
+      ref.read(messagesProvider.notifier).deleteMessagesFrom(pending).then((_) {
+        ref.read(chatControllerProvider).sendMessage(text, imagePath: imagePath);
+        _scrollToBottom();
+      });
+    } else {
+      ref.read(chatControllerProvider).sendMessage(text, imagePath: imagePath);
       _scrollToBottom();
     }
   }

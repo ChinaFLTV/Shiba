@@ -167,7 +167,7 @@ class _ModelHeader extends StatelessWidget {
                     color: colorScheme.onTertiaryContainer),
                 const SizedBox(width: 4),
                 Text(
-                  '可用内存: ~${_formatBytes(memoryLimit)}（推荐 ≤${_formatBytes(memoryLimit ~/ 2)}）',
+                  '可用内存: ~${_formatBytes(memoryLimit)}',
                   style: TextStyle(
                       fontSize: 12, color: colorScheme.onTertiaryContainer),
                 ),
@@ -223,8 +223,8 @@ enum _Suitability { recommended, ok, risky, tooLarge }
 _Suitability _evaluateSuitability(int fileSize, int memoryLimit) {
   if (fileSize <= 0 || memoryLimit <= 0) return _Suitability.ok;
   final ratio = fileSize / memoryLimit;
-  if (ratio <= 0.5) return _Suitability.recommended;
-  if (ratio <= 0.8) return _Suitability.ok;
+  if (ratio <= 0.6) return _Suitability.recommended;
+  if (ratio <= 0.85) return _Suitability.ok;
   if (ratio <= 1.0) return _Suitability.risky;
   return _Suitability.tooLarge;
 }
@@ -305,6 +305,13 @@ class _FileTile extends ConsumerWidget {
                     color: colorScheme.tertiaryContainer,
                     textColor: colorScheme.onTertiaryContainer,
                   ),
+                if (file.isMmproj)
+                  _HeaderChip(
+                    icon: Icons.visibility,
+                    label: 'Vision Projector',
+                    color: colorScheme.primaryContainer,
+                    textColor: colorScheme.onPrimaryContainer,
+                  ),
                 _buildSuitabilityChip(context, suitability),
               ],
             ),
@@ -356,19 +363,24 @@ class _FileTile extends ConsumerWidget {
     return _HeaderChip(icon: icon, label: label, color: bgColor, textColor: fgColor);
   }
 
-  Future<void> _startDownload(BuildContext context, WidgetRef ref) async {
+  /// Enqueue a single file for download and wire up progress/completion callbacks.
+  Future<void> _enqueueDownload(
+    BuildContext context,
+    WidgetRef ref,
+    HfModelFile targetFile,
+    String targetRepoId,
+  ) async {
     final hfApi = ref.read(hfApiServiceProvider);
     final downloadService = ref.read(downloadServiceProvider);
-    final filePath =
-        await downloadService.getModelFilePath(file.filename);
-    final downloadUrl = hfApi.getDownloadUrl(repoId, file.rfilename);
+    final filePath = await downloadService.getModelFilePath(targetFile.filename);
+    final downloadUrl = hfApi.getDownloadUrl(targetRepoId, targetFile.rfilename);
 
     final localModel = LocalModel(
       id: _uuid.v4(),
-      repoId: repoId,
-      filename: file.filename,
+      repoId: targetRepoId,
+      filename: targetFile.filename,
       filePath: filePath,
-      fileSize: file.size,
+      fileSize: targetFile.size,
       downloadedSize: 0,
       status: ModelStatus.pending,
       downloadUrl: downloadUrl,
@@ -416,13 +428,35 @@ class _FileTile extends ConsumerWidget {
         }
       },
     );
+  }
+
+  Future<void> _startDownload(BuildContext context, WidgetRef ref) async {
+    await _enqueueDownload(context, ref, file, repoId);
+
+    // Auto-download mmproj file for multimodal models
+    bool mmprojQueued = false;
+    if (!file.isMmproj) {
+      final allFiles = ref.read(hfModelFilesProvider(repoId)).valueOrNull ?? [];
+      final mmprojFile = allFiles.where((f) => f.isMmproj).firstOrNull;
+      if (mmprojFile != null) {
+        // Check if mmproj is already downloaded or queued
+        final localModels = ref.read(localModelsProvider).valueOrNull ?? [];
+        final alreadyExists = localModels.any((m) =>
+            m.repoId == repoId &&
+            m.filename.toLowerCase().contains('mmproj'));
+        if (!alreadyExists) {
+          await _enqueueDownload(context, ref, mmprojFile, repoId);
+          mmprojQueued = true;
+        }
+      }
+    }
 
     if (context.mounted) {
+      final msg = mmprojQueued
+          ? '开始下载 ${file.filename}（已自动附带视觉投影器）'
+          : '开始下载 ${file.filename}';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('开始下载 ${file.filename}'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
       );
       Navigator.pop(context);
     }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/app.dart';
 import 'package:shiba/core/constants.dart';
+import 'package:shiba/providers/image_settings_provider.dart';
 import 'package:shiba/providers/service_providers.dart';
 import 'package:shiba/providers/tts_providers.dart';
 import 'package:shiba/ui/shared/tts_download_dialog.dart';
@@ -61,6 +62,12 @@ class SettingsPage extends ConsumerWidget {
           _TtsModelCard(),
           const SizedBox(height: 4),
           _TtsParamsCard(),
+
+          const SizedBox(height: 16),
+
+          // Image compression section
+          const _SectionTitle(title: '图片处理'),
+          _ImageSettingsCard(),
 
           const SizedBox(height: 16),
 
@@ -317,6 +324,82 @@ class _TtsParamsCard extends ConsumerWidget {
                 textAlign: TextAlign.end,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageSettingsCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(imageSettingsProvider);
+    final notifier = ref.read(imageSettingsProvider.notifier);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.photo_size_select_large_outlined, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('压缩图片')),
+                Switch(
+                  value: settings.compressEnabled,
+                  onChanged: (v) => notifier.setCompressEnabled(v),
+                ),
+              ],
+            ),
+            if (settings.compressEnabled) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const SizedBox(width: 28),
+                  const Text('最大分辨率', style: TextStyle(fontSize: 13)),
+                  Expanded(
+                    child: Slider(
+                      value: settings.maxResolution.toDouble(),
+                      min: 256,
+                      max: 2048,
+                      divisions: 7,
+                      label: '${settings.maxResolution}px',
+                      onChanged: (v) => notifier.setMaxResolution(v.round()),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 52,
+                    child: Text('${settings.maxResolution}',
+                        style: const TextStyle(fontSize: 13),
+                        textAlign: TextAlign.end),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const SizedBox(width: 28),
+                  const Text('图片质量', style: TextStyle(fontSize: 13)),
+                  Expanded(
+                    child: Slider(
+                      value: settings.quality.toDouble(),
+                      min: 10,
+                      max: 100,
+                      divisions: 9,
+                      label: '${settings.quality}%',
+                      onChanged: (v) => notifier.setQuality(v.round()),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 52,
+                    child: Text('${settings.quality}%',
+                        style: const TextStyle(fontSize: 13),
+                        textAlign: TextAlign.end),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

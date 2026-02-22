@@ -72,6 +72,9 @@ class HfModelFile {
 
   bool get isGguf => filename.toLowerCase().endsWith('.gguf');
 
+  /// Whether this is a multimodal projector file (for vision models)
+  bool get isMmproj => filename.toLowerCase().contains('mmproj');
+
   /// Extract quantization type from filename (e.g. Q4_K_M, Q8_0, F16, F32)
   String get quantization {
     final upper = filename.toUpperCase();

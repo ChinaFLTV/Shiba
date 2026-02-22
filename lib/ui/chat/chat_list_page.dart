@@ -63,7 +63,9 @@ class ChatListPage extends ConsumerWidget {
   void _startNewChat(
       BuildContext context, WidgetRef ref, AsyncValue<List<LocalModel>> modelsAsync) {
     final models = modelsAsync.valueOrNull
-            ?.where((m) => m.status == ModelStatus.completed)
+            ?.where((m) =>
+                m.status == ModelStatus.completed &&
+                !m.filename.toLowerCase().contains('mmproj'))
             .toList() ??
         [];
 

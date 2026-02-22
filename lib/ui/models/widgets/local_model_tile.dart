@@ -182,6 +182,7 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
                   value: model.filePath,
                   copiable: true,
                   context: context,
+                  maxLines: null,
                 ),
                 _DetailRow(label: '文件大小', value: model.fileSizeFormatted),
                 if (model.quantization.isNotEmpty)
@@ -263,26 +264,36 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: const Icon(Icons.pause, size: 20),
-              onPressed: () {
-                ref.read(downloadServiceProvider).pauseDownload(model.id);
-                ref.read(downloadProgressProvider(model.id).notifier).state =
-                    DownloadProgress(
-                  received: ref.read(downloadProgressProvider(model.id)).received,
-                  total: ref.read(downloadProgressProvider(model.id)).total,
-                  isActive: false,
-                  timestamp: DateTime.now(),
-                );
-                ref.read(localModelsProvider.notifier).refresh();
-              },
-              tooltip: '暂停',
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: IconButton(
+                icon: const Icon(Icons.pause_rounded, size: 20),
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  ref.read(downloadServiceProvider).pauseDownload(model.id);
+                  ref.read(downloadProgressProvider(model.id).notifier).state =
+                      DownloadProgress(
+                    received: ref.read(downloadProgressProvider(model.id)).received,
+                    total: ref.read(downloadProgressProvider(model.id)).total,
+                    isActive: false,
+                    timestamp: DateTime.now(),
+                  );
+                  ref.read(localModelsProvider.notifier).refresh();
+                },
+                tooltip: '暂停',
+              ),
             ),
-            IconButton(
-              icon: Icon(Icons.stop_circle_outlined,
-                  size: 20, color: Theme.of(context).colorScheme.error),
-              onPressed: () => _confirmCancel(context, ref),
-              tooltip: '取消下载',
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: IconButton(
+                icon: Icon(Icons.cancel_outlined,
+                    size: 20, color: Theme.of(context).colorScheme.error),
+                padding: EdgeInsets.zero,
+                onPressed: () => _confirmCancel(context, ref),
+                tooltip: '取消下载',
+              ),
             ),
           ],
         );
@@ -487,11 +498,13 @@ class _DetailRow extends StatelessWidget {
   final String value;
   final bool copiable;
   final BuildContext? context;
+  final int? maxLines;
   const _DetailRow({
     required this.label,
     required this.value,
     this.copiable = false,
     this.context,
+    this.maxLines = 2,
   });
 
   @override
@@ -510,8 +523,8 @@ class _DetailRow extends StatelessWidget {
           Expanded(
             child: Text(value,
                 style: const TextStyle(fontSize: 12),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis),
+                maxLines: maxLines,
+                overflow: maxLines != null ? TextOverflow.ellipsis : null),
           ),
           if (copiable)
             GestureDetector(
