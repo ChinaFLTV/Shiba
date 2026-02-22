@@ -61,6 +61,18 @@ class ConversationRepository {
     await db.delete('messages', where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Delete multiple messages by their IDs.
+  Future<void> deleteMessagesByIds(List<String> ids) async {
+    if (ids.isEmpty) return;
+    final db = await DatabaseHelper.instance.database;
+    final placeholders = List.filled(ids.length, '?').join(',');
+    await db.delete(
+      'messages',
+      where: 'id IN ($placeholders)',
+      whereArgs: ids,
+    );
+  }
+
   /// Delete a message and all messages after it in the same conversation.
   Future<void> deleteMessagesFrom(String conversationId, DateTime fromTime) async {
     final db = await DatabaseHelper.instance.database;

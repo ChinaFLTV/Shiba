@@ -9,22 +9,32 @@ class MessageBubble extends StatelessWidget {
   final Message message;
   final bool isStreaming;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   final VoidCallback? onTtsPlay;
   final VoidCallback? onTtsStop;
   final bool isTtsPlaying;
   final bool showActions;
   final VoidCallback? onTap;
+  final bool selectionMode;
+  final bool isSelected;
+  final ValueChanged<bool?>? onSelectionChanged;
+  final VoidCallback? onLongPress;
 
   const MessageBubble({
     super.key,
     required this.message,
     this.isStreaming = false,
     this.onEdit,
+    this.onDelete,
     this.onTtsPlay,
     this.onTtsStop,
     this.isTtsPlaying = false,
     this.showActions = false,
     this.onTap,
+    this.selectionMode = false,
+    this.isSelected = false,
+    this.onSelectionChanged,
+    this.onLongPress,
   });
 
   @override
@@ -39,8 +49,23 @@ class MessageBubble extends StatelessWidget {
         mainAxisAlignment:
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          if (!isUser) _buildAvatar(context, isUser),
-          if (!isUser) const SizedBox(width: 8),
+          // Selection checkbox
+          if (selectionMode)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, right: 4),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: Checkbox(
+                  value: isSelected,
+                  onChanged: onSelectionChanged,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ),
+          if (!isUser && !selectionMode) _buildAvatar(context, isUser),
+          if (!isUser && !selectionMode) const SizedBox(width: 8),
           Flexible(
             child: Column(
               crossAxisAlignment:
@@ -49,6 +74,7 @@ class MessageBubble extends StatelessWidget {
                 // Bubble
                 GestureDetector(
                   onTap: isStreaming ? null : onTap,
+                  onLongPress: isStreaming ? null : onLongPress,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
@@ -154,6 +180,12 @@ class MessageBubble extends StatelessWidget {
                             tooltip: '编辑并重发',
                             onTap: onEdit!,
                           ),
+                        if (onDelete != null)
+                          _ActionBtn(
+                            icon: Icons.delete_outline,
+                            tooltip: '删除',
+                            onTap: onDelete!,
+                          ),
                         // TTS read-aloud button (for assistant messages)
                         if (!isUser)
                           isTtsPlaying
@@ -173,8 +205,8 @@ class MessageBubble extends StatelessWidget {
               ],
             ),
           ),
-          if (isUser) const SizedBox(width: 8),
-          if (isUser) _buildAvatar(context, isUser),
+          if (isUser && !selectionMode) const SizedBox(width: 8),
+          if (isUser && !selectionMode) _buildAvatar(context, isUser),
         ],
       ),
     );

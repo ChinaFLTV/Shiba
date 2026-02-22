@@ -150,6 +150,18 @@ class MessagesNotifier extends AsyncNotifier<List<Message>> {
         );
     await refresh();
   }
+
+  /// Delete a single message by ID.
+  Future<void> deleteMessage(String messageId) async {
+    await ref.read(conversationRepoProvider).deleteMessage(messageId);
+    await refresh();
+  }
+
+  /// Delete multiple messages by their IDs.
+  Future<void> deleteMessagesByIds(List<String> ids) async {
+    await ref.read(conversationRepoProvider).deleteMessagesByIds(ids);
+    await refresh();
+  }
 }
 
 /// Whether the AI is currently generating a response

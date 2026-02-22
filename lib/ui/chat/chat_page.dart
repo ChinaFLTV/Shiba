@@ -36,6 +36,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   /// Message pending edit-and-resend (set when user taps edit, cleared on send).
   Message? _editPendingMessage;
 
+  /// Batch selection mode state.
+  bool _selectionMode = false;
+  final Set<String> _selectedMessageIds = {};
+
   /// Cached reference to TtsService for use in dispose() where ref is unavailable.
   late final TtsService _ttsService;
 
@@ -308,34 +312,56 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          children: [
-            Text(displayTitle,
-                style: const TextStyle(fontSize: 16),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-            Text(displayModel,
-                style: TextStyle(fontSize: 11, color: colorScheme.outline)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.tune, size: 22),
-            tooltip: '对话设置',
-            onPressed: () => _showConversationSettings(context),
-          ),
-          if (_modelLoading)
-            const Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+      appBar: _selectionMode
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
               ),
+              title: Text('已选 ${_selectedMessageIds.length} 条'),
+              actions: [
+                TextButton(
+                  onPressed: () => _selectAllMessages(messagesAsync),
+                  child: const Text('全选'),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: '删除所选',
+                  onPressed: _selectedMessageIds.isEmpty
+                      ? null
+                      : _confirmDeleteSelected,
+                ),
+              ],
+            )
+          : AppBar(
+              title: Column(
+                children: [
+                  Text(displayTitle,
+                      style: const TextStyle(fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  Text(displayModel,
+                      style:
+                          TextStyle(fontSize: 11, color: colorScheme.outline)),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.tune, size: 22),
+                  tooltip: '对话设置',
+                  onPressed: () => _showConversationSettings(context),
+                ),
+                if (_modelLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
       body: Column(
         children: [
           // Error banner
@@ -426,19 +452,36 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       return MessageBubble(
                         message: msg,
                         key: ValueKey(msg.id),
-                        onEdit: msg.role == MessageRole.user && !isGenerating
+                        onEdit: msg.role == MessageRole.user &&
+                                !isGenerating &&
+                                !_selectionMode
                             ? () => _editAndResend(msg)
+                            : null,
+                        onDelete: !isGenerating && !_selectionMode
+                            ? () => _confirmDeleteMessage(msg)
                             : null,
                         isTtsPlaying: ttsPlayingId == msg.id,
                         onTtsPlay: () => _handleTtsPlay(msg),
                         onTtsStop: () => _handleTtsStop(),
-                        showActions: _expandedMessageId == msg.id,
-                        onTap: () {
-                          setState(() {
-                            _expandedMessageId =
-                                _expandedMessageId == msg.id ? null : msg.id;
-                          });
-                        },
+                        showActions:
+                            _expandedMessageId == msg.id && !_selectionMode,
+                        onTap: _selectionMode
+                            ? () => _toggleMessageSelection(msg.id)
+                            : () {
+                                setState(() {
+                                  _expandedMessageId =
+                                      _expandedMessageId == msg.id
+                                          ? null
+                                          : msg.id;
+                                });
+                              },
+                        selectionMode: _selectionMode,
+                        isSelected: _selectedMessageIds.contains(msg.id),
+                        onSelectionChanged: (_) =>
+                            _toggleMessageSelection(msg.id),
+                        onLongPress: !isGenerating && !_selectionMode
+                            ? () => _enterSelectionMode(msg.id)
+                            : null,
                       );
                     }
                     // Streaming message
@@ -458,8 +501,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
           ),
 
-          // Input bar
-          ChatInputBar(
+          // Input bar (hidden in selection mode)
+          if (!_selectionMode)
+            ChatInputBar(
             key: _inputBarKey,
             enabled: !_modelLoading && _loadError == null,
             isGenerating: isGenerating,
@@ -584,6 +628,109 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     } else {
       ref.read(chatControllerProvider).sendMessage(text, imagePath: imagePath);
       _scrollToBottom();
+    }
+  }
+
+  // --- Message deletion & selection mode ---
+
+  void _enterSelectionMode(String initialMessageId) {
+    setState(() {
+      _selectionMode = true;
+      _selectedMessageIds.clear();
+      _selectedMessageIds.add(initialMessageId);
+      _expandedMessageId = null;
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _selectionMode = false;
+      _selectedMessageIds.clear();
+    });
+  }
+
+  void _toggleMessageSelection(String messageId) {
+    setState(() {
+      if (_selectedMessageIds.contains(messageId)) {
+        _selectedMessageIds.remove(messageId);
+      } else {
+        _selectedMessageIds.add(messageId);
+      }
+    });
+  }
+
+  void _selectAllMessages(AsyncValue<List<Message>> messagesAsync) {
+    final messages = messagesAsync.valueOrNull;
+    if (messages == null) return;
+    setState(() {
+      if (_selectedMessageIds.length == messages.length) {
+        _selectedMessageIds.clear();
+      } else {
+        _selectedMessageIds
+          ..clear()
+          ..addAll(messages.map((m) => m.id));
+      }
+    });
+  }
+
+  Future<void> _confirmDeleteMessage(Message message) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除消息'),
+        content: Text(
+          message.content.length > 50
+              ? '确定删除这条消息？\n\n"${message.content.substring(0, 50)}..."'
+              : '确定删除这条消息？\n\n"${message.content}"',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref.read(messagesProvider.notifier).deleteMessage(message.id);
+    }
+  }
+
+  Future<void> _confirmDeleteSelected() async {
+    final count = _selectedMessageIds.length;
+    if (count == 0) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('批量删除'),
+        content: Text('确定删除选中的 $count 条消息？此操作不可撤销。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref
+          .read(messagesProvider.notifier)
+          .deleteMessagesByIds(_selectedMessageIds.toList());
+      _exitSelectionMode();
     }
   }
 
