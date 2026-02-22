@@ -1,3 +1,4 @@
 build
 # Project exclude paths
 /.dart_tool/
+android/.gradle
