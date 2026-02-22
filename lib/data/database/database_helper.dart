@@ -7,10 +7,18 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   Database? _database;
+  Future<Database>? _databaseFuture;
 
   Future<Database> get database async {
-    _database ??= await _initDatabase();
-    return _database!;
+    if (_database != null) return _database!;
+    _databaseFuture ??= _initDatabase().then((db) {
+      _database = db;
+      return db;
+    }).catchError((error) {
+      _databaseFuture = null;
+      throw error;
+    });
+    return _databaseFuture!;
   }
 
   Future<Database> _initDatabase() async {
