@@ -1,0 +1,15 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:local_model/data/repositories/conversation_repository.dart';
+import 'package:local_model/data/repositories/model_repository.dart';
+import 'package:local_model/data/services/download_service.dart';
+import 'package:local_model/data/services/hf_api_service.dart';
+import 'package:local_model/data/services/llm_service.dart';
+
+final conversationRepoProvider = Provider((ref) => ConversationRepository());
+final modelRepoProvider = Provider((ref) => ModelRepository());
+final hfApiServiceProvider = Provider((ref) => HfApiService());
+final downloadServiceProvider = Provider((ref) {
+  final modelRepo = ref.watch(modelRepoProvider);
+  return DownloadService(modelRepo);
+});
+final llmServiceProvider = Provider((ref) => LlmService());

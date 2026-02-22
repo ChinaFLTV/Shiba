@@ -1,0 +1,56 @@
+name: local_model
+description: 本地大模型 - 在手机上运行AI大模型并进行对话
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Local LLM Inference
+  llamadart: ^0.6.1
+
+  # Network & Download
+  dio: ^5.7.0
+  path_provider: ^2.1.5
+
+  # Local Database
+  sqflite: ^2.4.1
+  path: ^1.9.0
+
+  # Markdown Rendering (optimized for AI output)
+  gpt_markdown: ^1.1.5
+
+  # Crypto (file integrity hashing)
+  crypto: ^3.0.3
+
+  # UI Utilities
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.2
+  uuid: ^4.5.1
+  intl: ^0.20.2
+  device_info_plus: ^11.2.0
+  share_plus: ^10.1.4
+  url_launcher: ^6.3.1
+  permission_handler: ^11.3.1
+  connectivity_plus: ^6.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  riverpod_generator: ^2.6.2
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
