@@ -13,7 +13,7 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentTab = ref.watch(homeTabProvider);
 
-    final pages = const [
+    const pages = [
       ChatListPage(),
       ModelsPage(),
       SettingsPage(),

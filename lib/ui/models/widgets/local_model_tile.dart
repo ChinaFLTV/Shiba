@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/data/models/local_model.dart';
+import 'package:shiba/core/utils.dart';
 import 'package:shiba/providers/model_providers.dart';
 import 'package:shiba/providers/service_providers.dart';
 
@@ -36,10 +37,10 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
 
     final progressFraction = dp.received > 0 ? dp.fraction : model.progress;
     final receivedText = dp.received > 0
-        ? _formatBytes(dp.received)
+        ? formatBytes(dp.received)
         : model.downloadedSizeFormatted;
     final totalText =
-        dp.total > 0 ? _formatBytes(dp.total) : model.fileSizeFormatted;
+        dp.total > 0 ? formatBytes(dp.total) : model.fileSizeFormatted;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
@@ -181,7 +182,6 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
                   label: '路径',
                   value: model.filePath,
                   copiable: true,
-                  context: context,
                   maxLines: null,
                 ),
                 _DetailRow(label: '文件大小', value: model.fileSizeFormatted),
@@ -497,13 +497,11 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
   final bool copiable;
-  final BuildContext? context;
   final int? maxLines;
   const _DetailRow({
     required this.label,
     required this.value,
     this.copiable = false,
-    this.context,
     this.maxLines = 2,
   });
 
@@ -530,15 +528,13 @@ class _DetailRow extends StatelessWidget {
             GestureDetector(
               onTap: () {
                 Clipboard.setData(ClipboardData(text: value));
-                if (context != null && context!.mounted) {
-                  ScaffoldMessenger.of(context!).showSnackBar(
-                    const SnackBar(
-                      content: Text('已复制到剪贴板'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                }
+                ScaffoldMessenger.of(outerContext).showSnackBar(
+                  const SnackBar(
+                    content: Text('已复制到剪贴板'),
+                    behavior: SnackBarBehavior.floating,
+                    duration: Duration(seconds: 1),
+                  ),
+                );
               },
               child: Icon(Icons.copy, size: 14, color: cs.outline),
             ),
@@ -548,11 +544,3 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-String _formatBytes(int bytes) {
-  if (bytes < 1024) return '$bytes B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-  if (bytes < 1024 * 1024 * 1024) {
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-}

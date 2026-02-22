@@ -6,6 +6,7 @@ import 'package:llamadart/llamadart.dart';
 import 'package:shiba/core/constants.dart';
 import 'package:shiba/core/cpu_feature_checker.dart';
 import 'package:shiba/core/gpu_stability_checker.dart';
+import 'package:shiba/core/utils.dart' show formatBytes;
 import 'package:shiba/data/models/message.dart';
 
 /// Service for local LLM inference using llamadart (llama.cpp binding).
@@ -192,7 +193,7 @@ class LlmService {
         return (
           false,
           '模型文件格式无效（非GGUF），可能下载不完整，请删除后重新下载\n'
-              '文件大小: ${_fmtBytes(fileSize)}'
+              '文件大小: ${formatBytes(fileSize)}'
         );
       }
 
@@ -219,7 +220,7 @@ class LlmService {
       final headHash = await _fileHeadHash(file);
 
       diagnostics.writeln('文件: $fileName');
-      diagnostics.writeln('大小: ${_fmtBytes(fileSize)}');
+      diagnostics.writeln('大小: ${formatBytes(fileSize)}');
       diagnostics.writeln('路径: $modelPath');
       diagnostics.writeln('GGUF版本: $ggufVersion');
       diagnostics.writeln('Tensor数: $tensorCount');
@@ -268,7 +269,7 @@ class LlmService {
       try {
         final vram = await engine.getVramInfo();
         diagnostics.writeln(
-            'VRAM: total=${_fmtBytes(vram.total)}, free=${_fmtBytes(vram.free)}');
+            'VRAM: total=${formatBytes(vram.total)}, free=${formatBytes(vram.free)}');
       } catch (e) {
         diagnostics.writeln('VRAM: 获取失败');
       }
@@ -411,15 +412,6 @@ class LlmService {
       return '${e.message}$details';
     }
     return e.toString();
-  }
-
-  static String _fmtBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   /// Generate a streaming response from the model.
@@ -603,7 +595,7 @@ class LlmService {
     int maxTokens = 32,
     double temperature = 0.3,
   }) async {
-    if (!_isLoaded || _engine == null) return '';
+    if (!_isLoaded || _engine == null || _engineCrashed) return '';
 
     final params = GenerationParams(
       temp: temperature,

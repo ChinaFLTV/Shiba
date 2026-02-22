@@ -15,9 +15,11 @@ class HfApiService {
 
   /// Search GGUF models from hf-mirror.com
   Future<List<HfModel>> searchModels(String query, {int offset = 0}) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return [];
     try {
       final response = await _dio.get('/api/models', queryParameters: {
-        'search': query,
+        'search': trimmed,
         'library': 'gguf',
         'sort': 'downloads',
         'direction': '-1',

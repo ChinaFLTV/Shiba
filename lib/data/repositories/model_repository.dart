@@ -16,7 +16,9 @@ class ModelRepository {
     final modelsDir = p.join(appDir.path, AppConstants.modelsSubDir);
     return maps.map((m) {
       final model = LocalModel.fromMap(m);
-      final resolvedPath = p.join(modelsDir, model.filename);
+      // Sanitize filename to prevent path traversal
+      final safeName = p.basename(model.filename);
+      final resolvedPath = p.join(modelsDir, safeName);
       if (resolvedPath == model.filePath) return model;
       return model.copyWith(filePath: resolvedPath);
     }).toList();

@@ -40,6 +40,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _selectionMode = false;
   final Set<String> _selectedMessageIds = {};
 
+  /// Whether the initial scroll-to-bottom has been performed.
+  bool _initialScrollDone = false;
+
   /// Cached reference to TtsService for use in dispose() where ref is unavailable.
   late final TtsService _ttsService;
 
@@ -242,12 +245,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void dispose() {
     _ttsService.onStateChanged = null;
     _ttsService.stop();
-    // Defer provider state reset to after the widget tree finalize phase,
-    // as Riverpod forbids synchronous state modifications during dispose/unmount.
-    Future.microtask(() {
+    // Reset TTS state synchronously before dispose completes.
+    // Use try-catch since the providers may already be invalidated.
+    try {
       _ttsPlayingIdNotifier.state = null;
       _ttsStateNotifier.state = TtsState.idle;
-    });
+    } catch (_) {
+      // Provider already disposed — safe to ignore
+    }
     _scrollController.dispose();
     super.dispose();
   }
@@ -440,6 +445,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 if (messages.isEmpty && !isGenerating) {
                   return _buildEmptyState(context);
                 }
+                // Scroll to bottom on first render (entering conversation)
+                if (!_initialScrollDone && messages.isNotEmpty) {
+                  _initialScrollDone = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_scrollController.hasClients) {
+                      _scrollController.jumpTo(
+                        _scrollController.position.maxScrollExtent,
+                      );
+                    }
+                  });
+                }
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -623,12 +639,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ref
             .read(chatControllerProvider)
             .sendMessage(text, imagePath: imagePath);
-        _scrollToBottom();
       });
     } else {
       ref.read(chatControllerProvider).sendMessage(text, imagePath: imagePath);
-      _scrollToBottom();
     }
+    _scrollToBottom();
   }
 
   // --- Message deletion & selection mode ---

@@ -6,6 +6,8 @@ import 'package:shiba/data/models/local_model.dart';
 import 'package:shiba/providers/model_providers.dart';
 import 'package:shiba/providers/service_providers.dart';
 
+import 'package:shiba/core/utils.dart';
+
 const _uuid = Uuid();
 
 class ModelFilesPage extends ConsumerWidget {
@@ -167,7 +169,7 @@ class _ModelHeader extends StatelessWidget {
                     color: colorScheme.onTertiaryContainer),
                 const SizedBox(width: 4),
                 Text(
-                  '可用内存: ~${_formatBytes(memoryLimit)}',
+                  '可用内存: ~${formatBytes(memoryLimit)}',
                   style: TextStyle(
                       fontSize: 12, color: colorScheme.onTertiaryContainer),
                 ),
@@ -370,6 +372,24 @@ class _FileTile extends ConsumerWidget {
     HfModelFile targetFile,
     String targetRepoId,
   ) async {
+    // Prevent duplicate downloads of the same file
+    final existingModels = ref.read(localModelsProvider).valueOrNull ?? [];
+    final alreadyExists = existingModels.any((m) =>
+        m.repoId == targetRepoId &&
+        m.filename == targetFile.filename &&
+        m.status != ModelStatus.failed);
+    if (alreadyExists) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${targetFile.filename} 已在下载列表中'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
     final hfApi = ref.read(hfApiServiceProvider);
     final downloadService = ref.read(downloadServiceProvider);
     final filePath = await downloadService.getModelFilePath(targetFile.filename);
@@ -432,6 +452,7 @@ class _FileTile extends ConsumerWidget {
 
   Future<void> _startDownload(BuildContext context, WidgetRef ref) async {
     await _enqueueDownload(context, ref, file, repoId);
+    if (!context.mounted) return;
 
     // Auto-download mmproj file for multimodal models
     bool mmprojQueued = false;
@@ -463,11 +484,3 @@ class _FileTile extends ConsumerWidget {
   }
 }
 
-String _formatBytes(int bytes) {
-  if (bytes < 1024) return '$bytes B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-  if (bytes < 1024 * 1024 * 1024) {
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-}

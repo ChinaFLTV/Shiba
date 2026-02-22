@@ -31,9 +31,10 @@ class ConversationRepository {
 
   Future<void> deleteConversation(String id) async {
     final db = await DatabaseHelper.instance.database;
-    await db.delete('messages',
-        where: 'conversation_id = ?', whereArgs: [id]);
-    await db.delete('conversations', where: 'id = ?', whereArgs: [id]);
+    final batch = db.batch();
+    batch.delete('messages', where: 'conversation_id = ?', whereArgs: [id]);
+    batch.delete('conversations', where: 'id = ?', whereArgs: [id]);
+    await batch.commit(noResult: true);
   }
 
   Future<List<Message>> getMessages(String conversationId) async {
@@ -73,13 +74,25 @@ class ConversationRepository {
     );
   }
 
-  /// Delete a message and all messages after it in the same conversation.
-  Future<void> deleteMessagesFrom(String conversationId, DateTime fromTime) async {
+  /// Delete a message and all messages created at or after it in the same
+  /// conversation. Uses both created_at and rowid ordering to handle the
+  /// edge case where two messages share the same millisecond timestamp.
+  Future<void> deleteMessagesFrom(String conversationId, String messageId) async {
     final db = await DatabaseHelper.instance.database;
+    // Look up the target message's timestamp to use as boundary
+    final maps = await db.query('messages',
+        columns: ['created_at', 'rowid'],
+        where: 'id = ?',
+        whereArgs: [messageId]);
+    if (maps.isEmpty) return;
+    final fromTime = maps.first['created_at'] as int;
+    final fromRowid = maps.first['rowid'] as int;
+    // Delete messages that are strictly newer, OR share the same timestamp
+    // but were inserted at or after the target message (by rowid).
     await db.delete(
       'messages',
-      where: 'conversation_id = ? AND created_at >= ?',
-      whereArgs: [conversationId, fromTime.millisecondsSinceEpoch],
+      where: 'conversation_id = ? AND (created_at > ? OR (created_at = ? AND rowid >= ?))',
+      whereArgs: [conversationId, fromTime, fromTime, fromRowid],
     );
   }
 }

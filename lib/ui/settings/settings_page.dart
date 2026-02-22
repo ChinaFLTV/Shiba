@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/app.dart';
 import 'package:shiba/core/constants.dart';
+import 'package:shiba/core/utils.dart';
 import 'package:shiba/providers/chat_defaults_provider.dart';
 import 'package:shiba/providers/image_settings_provider.dart';
 import 'package:shiba/providers/service_providers.dart';
@@ -82,19 +83,19 @@ class SettingsPage extends ConsumerWidget {
           Card(
             clipBehavior: Clip.antiAlias,
             child: Column(
-              children: [
+              children: const [
                 _AboutTile(
                   icon: Icons.info_outline,
                   title: AppConstants.appName,
                   subtitle: '版本 1.0.0',
                 ),
-                const Divider(height: 1),
+                Divider(height: 1),
                 _AboutTile(
                   icon: Icons.memory,
                   title: '推理引擎',
                   subtitle: 'llama.cpp (llamadart)',
                 ),
-                const Divider(height: 1),
+                Divider(height: 1),
                 _AboutTile(
                   icon: Icons.cloud_outlined,
                   title: '模型来源',
@@ -470,14 +471,6 @@ class _TtsModelCardState extends ConsumerState<_TtsModelCard> {
     }
   }
 
-  String _formatSize(int bytes) {
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -491,7 +484,7 @@ class _TtsModelCardState extends ConsumerState<_TtsModelCard> {
             subtitle: _loading
                 ? const Text('检查中...')
                 : _isReady
-                    ? Text('已下载 · ${_formatSize(_modelSize)}')
+                    ? Text('已下载 · ${formatBytes(_modelSize)}')
                     : const Text('未下载 · 约182MB'),
             trailing: _loading
                 ? const SizedBox(

@@ -1,3 +1,5 @@
+import 'package:shiba/core/utils.dart';
+
 /// Represents a model from HuggingFace Hub API
 class HfModel {
   final String modelId;
@@ -61,14 +63,7 @@ class HfModelFile {
     required this.rfilename,
   });
 
-  String get sizeFormatted {
-    if (size < 1024) return '$size B';
-    if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(1)} KB';
-    if (size < 1024 * 1024 * 1024) {
-      return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(size / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
+  String get sizeFormatted => formatBytes(size);
 
   bool get isGguf => filename.toLowerCase().endsWith('.gguf');
 

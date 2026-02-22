@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shiba/core/utils.dart';
 import 'package:shiba/data/models/hf_model.dart';
 import 'package:shiba/data/models/local_model.dart';
 import 'package:shiba/providers/service_providers.dart';
@@ -57,14 +58,7 @@ class DownloadProgress {
 
   double get fraction => total > 0 ? received / total : 0.0;
 
-  String get speedFormatted {
-    if (speed <= 0) return '--';
-    if (speed < 1024) return '${speed.toStringAsFixed(0)} B/s';
-    if (speed < 1024 * 1024) {
-      return '${(speed / 1024).toStringAsFixed(1)} KB/s';
-    }
-    return '${(speed / (1024 * 1024)).toStringAsFixed(1)} MB/s';
-  }
+  String get speedFormatted => formatSpeed(speed);
 
   String get etaFormatted {
     if (speed <= 0 || total <= 0) return '--';
@@ -102,7 +96,7 @@ final hfModelFilesProvider =
 /// Android: parses /proc/meminfo for MemTotal.
 /// iOS/other: falls back to a conservative 4 GB estimate.
 final deviceMemoryProvider = FutureProvider<int>((ref) async {
-  int totalBytes = 4 * 1024 * 1024 * 1024; // 4 GB fallback
+  int totalBytes = 4 * 1024 * 1024 * 1024; // 4 GB fallback (safe on 64-bit)
 
   if (Platform.isAndroid) {
     try {
@@ -112,6 +106,10 @@ final deviceMemoryProvider = FutureProvider<int>((ref) async {
         totalBytes = int.parse(match.group(1)!) * 1024;
       }
     } catch (_) {}
+  } else if (Platform.isIOS) {
+    // iOS doesn't expose /proc/meminfo; use a reasonable default.
+    // Most modern iPhones have 4-8 GB RAM.
+    totalBytes = 6 * 1024 * 1024 * 1024; // 6 GB estimate for iOS
   }
 
   return totalBytes;

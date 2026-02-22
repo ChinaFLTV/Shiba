@@ -211,6 +211,15 @@ class _ConversationTile extends ConsumerWidget {
                     m.id == conversation.modelId &&
                     m.status == ModelStatus.completed)
                 .firstOrNull;
+            if (model == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('模型 ${conversation.modelName} 已被删除，请重新下载'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
             ref.read(selectedModelProvider.notifier).state = model;
             Navigator.push(
               context,

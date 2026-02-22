@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:shiba/core/utils.dart';
 import 'package:shiba/data/services/tts_service.dart';
 
 /// Reusable dialog for downloading TTS model with progress, speed, and cancel.
@@ -104,15 +105,6 @@ class _TtsDownloadDialogState extends State<TtsDownloadDialog> {
     _cancelToken?.cancel('user_cancelled');
   }
 
-  String _formatSpeed(double bytesPerSec) {
-    if (bytesPerSec <= 0) return '计算中...';
-    if (bytesPerSec < 1024) return '${bytesPerSec.toStringAsFixed(0)} B/s';
-    if (bytesPerSec < 1024 * 1024) {
-      return '${(bytesPerSec / 1024).toStringAsFixed(1)} KB/s';
-    }
-    return '${(bytesPerSec / (1024 * 1024)).toStringAsFixed(1)} MB/s';
-  }
-
   @override
   Widget build(BuildContext context) {
     final fraction = _total > 0 ? _received / _total : 0.0;
@@ -135,7 +127,7 @@ class _TtsDownloadDialogState extends State<TtsDownloadDialog> {
               children: [
                 Text('${(fraction * 100).toStringAsFixed(1)}%',
                     style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                Text(_formatSpeed(_speed),
+                Text(formatSpeed(_speed),
                     style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),

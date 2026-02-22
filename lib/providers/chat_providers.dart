@@ -146,7 +146,7 @@ class MessagesNotifier extends AsyncNotifier<List<Message>> {
   Future<void> deleteMessagesFrom(Message message) async {
     await ref.read(conversationRepoProvider).deleteMessagesFrom(
           message.conversationId,
-          message.createdAt,
+          message.id,
         );
     await refresh();
   }
@@ -218,6 +218,10 @@ class ChatController {
     final scopedMessages = _trimMessagesForHistory(messages, historyRounds);
 
     // Start streaming generation with per-conversation params
+    // Cancel any existing subscription to prevent duplicate listeners
+    _subscription?.cancel();
+    _subscription = null;
+
     final stream = llmService.generateStream(
       scopedMessages,
       temperature: conv?.temperature ?? AppConstants.defaultTemperature,
@@ -233,6 +237,10 @@ class ChatController {
         _ref.read(streamingTextProvider.notifier).state = _buffer.toString();
       },
       onDone: () async {
+        // Guard against stale callback after stopGeneration() nulled _subscription
+        if (_subscription == null) return;
+        _subscription = null;
+
         final finalText = _buffer.toString();
         if (finalText.isNotEmpty) {
           final msg = await _ref
@@ -248,6 +256,7 @@ class ChatController {
         await _ref.read(messagesProvider.notifier).refresh();
       },
       onError: (error) {
+        _subscription = null;
         debugPrint('[Chat] Generation error: $error');
         _ref.read(generationErrorProvider.notifier).state = error.toString();
         _ref.read(isGeneratingProvider.notifier).state = false;
@@ -264,19 +273,28 @@ class ChatController {
         await _ref.read(conversationRepoProvider).getConversation(convId);
     if (conv == null || conv.title != '新对话') return;
 
-    // Try to generate a summary title using the model (background, best-effort)
+    // Try to generate a summary title using the model (background, best-effort).
+    // Use a plain instruction prompt that works across model families
+    // (ChatML, Llama, Mistral, etc.) since generateOnce uses raw completion.
     final llmService = _ref.read(llmServiceProvider);
     if (llmService.isLoaded) {
       try {
         final prompt =
-            '<|im_start|>system\n你是标题生成助手。根据用户的问题，生成一个简短的对话标题，不超过15个字，只输出标题本身。<|im_end|>\n'
-            '<|im_start|>user\n$userMsg<|im_end|>\n'
-            '<|im_start|>assistant\n';
+            'Generate a short title (max 15 Chinese characters) for this conversation. '
+            'Output ONLY the title, nothing else.\n\n'
+            'User: $userMsg\n'
+            'Assistant: ${assistantMsg.content.length > 100 ? assistantMsg.content.substring(0, 100) : assistantMsg.content}\n\n'
+            'Title: ';
         final title = await llmService.generateOnce(prompt, maxTokens: 32);
-        if (title.isNotEmpty && title.length <= 30) {
+        // Clean up: strip quotes, whitespace, and common artifacts
+        final cleaned = title
+            .replaceAll(RegExp(r'^["\s"「『]+'), '')
+            .replaceAll(RegExp(r'["\s"」』]+$'), '')
+            .trim();
+        if (cleaned.isNotEmpty && cleaned.length <= 30) {
           await _ref
               .read(conversationsProvider.notifier)
-              .updateTitle(convId, title, updateTime: false);
+              .updateTitle(convId, cleaned, updateTime: false);
           return;
         }
       } catch (e) {
@@ -294,23 +312,25 @@ class ChatController {
 
   void stopGeneration() {
     _ref.read(llmServiceProvider).stopGeneration();
-    _subscription?.cancel();
+    final sub = _subscription;
     _subscription = null;
+    sub?.cancel();
 
     // Save partial response if any content was generated
     final partialText = _buffer.toString();
+    _ref.read(isGeneratingProvider.notifier).state = false;
+    _ref.read(streamingTextProvider.notifier).state = '';
+    _buffer.clear();
+
     if (partialText.isNotEmpty) {
       _ref
           .read(messagesProvider.notifier)
           .addAssistantMessage(partialText)
-          .then(
-            (_) => _ref.read(messagesProvider.notifier).refresh(),
-          );
+          .then((_) => _ref.read(messagesProvider.notifier).refresh())
+          .catchError((e) {
+        debugPrint('[Chat] Failed to save partial response: $e');
+      });
     }
-
-    _ref.read(isGeneratingProvider.notifier).state = false;
-    _ref.read(streamingTextProvider.notifier).state = '';
-    _buffer.clear();
   }
 
   List<Message> _trimMessagesForHistory(

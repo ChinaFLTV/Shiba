@@ -1,3 +1,5 @@
+import 'package:shiba/core/utils.dart';
+
 enum ModelStatus { pending, downloading, paused, completed, failed }
 
 class LocalModel {
@@ -56,17 +58,8 @@ class LocalModel {
         '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
   }
 
-  String get fileSizeFormatted => _formatBytes(fileSize);
-  String get downloadedSizeFormatted => _formatBytes(downloadedSize);
-
-  static String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
+  String get fileSizeFormatted => formatBytes(fileSize);
+  String get downloadedSizeFormatted => formatBytes(downloadedSize);
 
   Map<String, dynamic> toMap() => {
         'id': id,

@@ -38,12 +38,17 @@ class Message {
             DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
       );
 
-  Message copyWith({String? content, String? imagePath}) => Message(
+  Message copyWith({
+    String? content,
+    String? imagePath,
+    bool clearImage = false,
+  }) =>
+      Message(
         id: id,
         conversationId: conversationId,
         role: role,
         content: content ?? this.content,
-        imagePath: imagePath ?? this.imagePath,
+        imagePath: clearImage ? null : (imagePath ?? this.imagePath),
         createdAt: createdAt,
       );
 }

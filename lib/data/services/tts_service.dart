@@ -514,7 +514,11 @@ class TtsService {
     _speakSeqId++; // Invalidate any pending isolate result
     _playerCompleteSub?.cancel();
     _playerCompleteSub = null;
-    await _player.stop();
+    try {
+      await _player.stop();
+    } catch (e) {
+      debugPrint('[TTS] player.stop() error (ignored): $e');
+    }
     if (_state == TtsState.speaking) {
       _setState(TtsState.idle);
     }

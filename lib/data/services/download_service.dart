@@ -22,13 +22,17 @@ class DownloadService {
     ));
   }
 
-  /// Get the models storage directory
+  String? _cachedModelsDir;
+
+  /// Get the models storage directory (cached after first call)
   Future<String> get _modelsDir async {
+    if (_cachedModelsDir != null) return _cachedModelsDir!;
     final appDir = await getApplicationDocumentsDirectory();
     final dir = Directory(p.join(appDir.path, AppConstants.modelsSubDir));
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
+    _cachedModelsDir = dir.path;
     return dir.path;
   }
 
@@ -164,7 +168,9 @@ class DownloadService {
           return;
         }
         // Pause — persist current progress from actual file size
-        final file = File(model.filePath);
+        final dir = await _modelsDir;
+        final filePath = p.join(dir, model.filename);
+        final file = File(filePath);
         final currentSize =
             await file.exists() ? await file.length() : model.downloadedSize;
         await _modelRepo.updateDownloadProgress(
@@ -172,9 +178,11 @@ class DownloadService {
         return;
       }
 
-      // HTTP 416: file already complete — treat as success
+      // HTTP 416: Range Not Satisfiable — file may already be complete
       if (e.response?.statusCode == 416) {
-        final file = File(model.filePath);
+        final dir = await _modelsDir;
+        final filePath = p.join(dir, model.filename);
+        final file = File(filePath);
         if (await file.exists()) {
           final fileLen = await file.length();
           if (model.fileSize > 0 && fileLen >= model.fileSize) {
@@ -185,6 +193,9 @@ class DownloadService {
             onComplete();
             return;
           }
+          // File exists but is smaller than expected — corrupted partial.
+          // Delete and mark as failed so user can retry from scratch.
+          await file.delete();
         }
       }
 
@@ -222,7 +233,9 @@ class DownloadService {
   /// Delete model file from disk
   Future<void> _deleteModelFile(LocalModel model) async {
     try {
-      final file = File(model.filePath);
+      final dir = await _modelsDir;
+      final filePath = p.join(dir, model.filename);
+      final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
       }
@@ -235,14 +248,12 @@ class DownloadService {
     return p.join(dir, filename);
   }
 
-  /// Check available storage space
+  /// Check available storage space.
+  /// Note: Dart doesn't provide a direct API for free disk space.
+  /// Returns a conservative fallback. Callers should treat this as an estimate.
   Future<int> getAvailableSpace() async {
-    try {
-      final dir = await _modelsDir;
-      final stat = await FileStat.stat(dir);
-      return stat.size > 0 ? stat.size : 10 * 1024 * 1024 * 1024;
-    } catch (_) {
-      return 10 * 1024 * 1024 * 1024;
-    }
+    // No reliable cross-platform API for free disk space in Dart.
+    // Return a large fallback so callers don't block downloads unnecessarily.
+    return 10737418240; // 10 GB fallback
   }
 }

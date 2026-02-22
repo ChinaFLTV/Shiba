@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 class ImagePreviewPage extends StatelessWidget {
   final String imagePath;
@@ -18,7 +18,7 @@ class ImagePreviewPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.save_alt),
-            tooltip: '保存到相册',
+            tooltip: '保存副本',
             onPressed: () => _saveImage(context),
           ),
         ],
@@ -52,17 +52,36 @@ class ImagePreviewPage extends StatelessWidget {
         }
         return;
       }
-      final bytes = await file.readAsBytes();
-      final ext = imagePath.split('.').last.toLowerCase();
-      final xFile = XFile.fromData(
-        Uint8List.fromList(bytes),
-        mimeType: 'image/$ext',
-        name: 'shiba_${DateTime.now().millisecondsSinceEpoch}.$ext',
+
+      // Save a copy to a user-accessible directory (Downloads or Documents)
+      final saveDir = Platform.isAndroid
+          ? Directory('/storage/emulated/0/Pictures/Shiba')
+          : await getApplicationDocumentsDirectory();
+
+      if (Platform.isAndroid && !await saveDir.exists()) {
+        await saveDir.create(recursive: true);
+      }
+
+      final ext = p.extension(imagePath).isNotEmpty
+          ? p.extension(imagePath)
+          : '.jpg';
+      final destName = 'shiba_${DateTime.now().millisecondsSinceEpoch}$ext';
+      final destPath = p.join(
+        Platform.isAndroid ? saveDir.path : saveDir.path,
+        destName,
       );
-      await xFile.saveTo(imagePath);
+
+      await file.copy(destPath);
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('图片已保存'), behavior: SnackBarBehavior.floating, duration: Duration(seconds: 1)),
+          SnackBar(
+            content: Text(Platform.isAndroid
+                ? '图片已保存到 Pictures/Shiba'
+                : '图片已保存到 $destName'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } catch (e) {

@@ -96,23 +96,36 @@ class DatabaseHelper {
       ''');
     }
     if (oldVersion < 3) {
-      await db.execute(
-          "ALTER TABLE conversations ADD COLUMN system_prompt TEXT NOT NULL DEFAULT ''");
-      await db.execute(
-          'ALTER TABLE conversations ADD COLUMN temperature REAL NOT NULL DEFAULT 0.7');
-      await db.execute(
-          'ALTER TABLE conversations ADD COLUMN top_k INTEGER NOT NULL DEFAULT 40');
-      await db.execute(
-          'ALTER TABLE conversations ADD COLUMN top_p REAL NOT NULL DEFAULT 0.9');
-      await db.execute(
-          'ALTER TABLE conversations ADD COLUMN max_tokens INTEGER NOT NULL DEFAULT 1024');
+      await _safeAddColumn(db, 'conversations', 'system_prompt',
+          "TEXT NOT NULL DEFAULT ''");
+      await _safeAddColumn(
+          db, 'conversations', 'temperature', 'REAL NOT NULL DEFAULT 0.7');
+      await _safeAddColumn(
+          db, 'conversations', 'top_k', 'INTEGER NOT NULL DEFAULT 40');
+      await _safeAddColumn(
+          db, 'conversations', 'top_p', 'REAL NOT NULL DEFAULT 0.9');
+      await _safeAddColumn(
+          db, 'conversations', 'max_tokens', 'INTEGER NOT NULL DEFAULT 1024');
     }
     if (oldVersion < 4) {
-      await db.execute('ALTER TABLE messages ADD COLUMN image_path TEXT');
+      await _safeAddColumn(db, 'messages', 'image_path', 'TEXT');
     }
     if (oldVersion < 5) {
-      await db.execute(
-          'ALTER TABLE conversations ADD COLUMN history_rounds INTEGER NOT NULL DEFAULT 6');
+      await _safeAddColumn(db, 'conversations', 'history_rounds',
+          'INTEGER NOT NULL DEFAULT 6');
+    }
+  }
+
+  /// Safely add a column, ignoring "duplicate column" errors.
+  Future<void> _safeAddColumn(
+      Database db, String table, String column, String type) async {
+    try {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $type');
+    } catch (e) {
+      // Column likely already exists — safe to ignore
+      if (!e.toString().toLowerCase().contains('duplicate column')) {
+        rethrow;
+      }
     }
   }
 
