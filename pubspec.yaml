@@ -34,6 +34,10 @@ dependencies:
   # Crypto (file integrity hashing)
   crypto: ^3.0.3
 
+  # TTS (Text-to-Speech)
+  sherpa_onnx: ^1.10.30
+  audioplayers: ^6.1.0
+
   # UI Utilities
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.2

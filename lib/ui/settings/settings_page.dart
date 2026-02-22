@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_model/app.dart';
 import 'package:local_model/core/constants.dart';
+import 'package:local_model/providers/service_providers.dart';
+import 'package:local_model/providers/tts_providers.dart';
+import 'package:local_model/ui/shared/tts_download_dialog.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -17,68 +21,69 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         children: [
-          // Appearance section
+          // Appearance section — single dropdown item
           const _SectionTitle(title: '外观'),
           Card(
-            child: Column(
-                children: [
-                  RadioListTile<ThemeMode>(
-                    title: const Text('跟随系统'),
+            child: ListTile(
+              leading: const Icon(Icons.palette_outlined),
+              title: const Text('主题模式'),
+              trailing: DropdownButton<ThemeMode>(
+                value: themeMode,
+                underline: const SizedBox.shrink(),
+                borderRadius: BorderRadius.circular(12),
+                items: const [
+                  DropdownMenuItem(
                     value: ThemeMode.system,
-                    groupValue: themeMode,
-                    onChanged: (v) {
-                      if (v != null) {
-                        ref.read(themeModeProvider.notifier).setThemeMode(v);
-                      }
-                    },
+                    child: Text('跟随系统'),
                   ),
-                  RadioListTile<ThemeMode>(
-                    title: const Text('浅色模式'),
+                  DropdownMenuItem(
                     value: ThemeMode.light,
-                    groupValue: themeMode,
-                    onChanged: (v) {
-                      if (v != null) {
-                        ref.read(themeModeProvider.notifier).setThemeMode(v);
-                      }
-                    },
+                    child: Text('浅色模式'),
                   ),
-                  RadioListTile<ThemeMode>(
-                    title: const Text('深色模式'),
+                  DropdownMenuItem(
                     value: ThemeMode.dark,
-                    groupValue: themeMode,
-                    onChanged: (v) {
-                      if (v != null) {
-                        ref.read(themeModeProvider.notifier).setThemeMode(v);
-                      }
-                    },
+                    child: Text('深色模式'),
                   ),
                 ],
+                onChanged: (v) {
+                  if (v != null) {
+                    ref.read(themeModeProvider.notifier).setThemeMode(v);
+                  }
+                },
               ),
+            ),
           ),
 
           const SizedBox(height: 16),
 
-          // About section
+          // TTS section
+          const _SectionTitle(title: '语音合成 (TTS)'),
+          _TtsModelCard(),
+
+          const SizedBox(height: 16),
+
+          // About section — with ink splash on tap/long-press
           const _SectionTitle(title: '关于'),
           Card(
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
-                const ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text(AppConstants.appName),
-                  subtitle: Text('版本 1.0.0'),
+                _AboutTile(
+                  icon: Icons.info_outline,
+                  title: AppConstants.appName,
+                  subtitle: '版本 1.0.0',
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.memory),
-                  title: Text('推理引擎'),
-                  subtitle: Text('llama.cpp (llamadart)'),
+                _AboutTile(
+                  icon: Icons.memory,
+                  title: '推理引擎',
+                  subtitle: 'llama.cpp (llamadart)',
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.cloud_outlined),
-                  title: Text('模型来源'),
-                  subtitle: Text('hf-mirror.com (HuggingFace 镜像)'),
+                _AboutTile(
+                  icon: Icons.cloud_outlined,
+                  title: '模型来源',
+                  subtitle: 'hf-mirror.com (HuggingFace 镜像)',
                 ),
               ],
             ),
@@ -115,5 +120,162 @@ class _SectionTitle extends StatelessWidget {
               .titleSmall
               ?.copyWith(color: Theme.of(context).colorScheme.primary)),
     );
+  }
+}
+
+/// About section tile with ink splash feedback on tap/long-press
+class _AboutTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _AboutTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        // Light haptic feedback for a polished feel
+        HapticFeedback.lightImpact();
+      },
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        Clipboard.setData(ClipboardData(text: '$title: $subtitle'));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已复制: $subtitle'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+      ),
+    );
+  }
+}
+
+class _TtsModelCard extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_TtsModelCard> createState() => _TtsModelCardState();
+}
+
+class _TtsModelCardState extends ConsumerState<_TtsModelCard> {
+  bool _isReady = false;
+  int _modelSize = 0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkStatus();
+  }
+
+  Future<void> _checkStatus() async {
+    final tts = ref.read(ttsServiceProvider);
+    final ready = await tts.isModelDownloaded();
+    final size = ready ? await tts.getModelSize() : 0;
+    if (mounted) {
+      setState(() {
+        _isReady = ready;
+        _modelSize = size;
+        _loading = false;
+      });
+    }
+  }
+
+  String _formatSize(int bytes) {
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.record_voice_over_outlined),
+            title: const Text('MeloTTS 中英文语音模型'),
+            subtitle: _loading
+                ? const Text('检查中...')
+                : _isReady
+                    ? Text('已下载 · ${_formatSize(_modelSize)}')
+                    : const Text('未下载 · 约182MB'),
+            trailing: _loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : _isReady
+                    ? IconButton(
+                        icon: Icon(Icons.delete_outline,
+                            color: colorScheme.error),
+                        tooltip: '删除语音模型',
+                        onPressed: () => _confirmDelete(context),
+                      )
+                    : FilledButton.tonal(
+                        onPressed: () => _startDownload(context),
+                        child: const Text('下载'),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startDownload(BuildContext context) {
+    final tts = ref.read(ttsServiceProvider);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => TtsDownloadDialog(
+        ttsService: tts,
+        onComplete: () {
+          ref.invalidate(ttsModelReadyProvider);
+          _checkStatus();
+        },
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除语音模型'),
+        content: const Text('确定要删除已下载的TTS语音模型吗？\n删除后朗读功能将不可用，需要重新下载。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final tts = ref.read(ttsServiceProvider);
+      await tts.deleteModel();
+      ref.invalidate(ttsModelReadyProvider);
+      _checkStatus();
+    }
   }
 }

@@ -6,11 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_model/core/constants.dart';
 import 'package:local_model/data/models/conversation.dart';
 import 'package:local_model/data/models/message.dart';
+import 'package:local_model/data/services/tts_service.dart';
 import 'package:local_model/providers/chat_providers.dart';
 import 'package:local_model/providers/model_providers.dart';
 import 'package:local_model/providers/service_providers.dart';
+import 'package:local_model/providers/tts_providers.dart';
 import 'package:local_model/ui/chat/widgets/chat_input_bar.dart';
 import 'package:local_model/ui/chat/widgets/message_bubble.dart';
+import 'package:local_model/ui/shared/tts_download_dialog.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   final Conversation conversation;
@@ -30,7 +33,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _ensureModelLoaded();
+      _setupTtsCallbacks();
     });
+  }
+
+  void _setupTtsCallbacks() {
+    final ttsService = ref.read(ttsServiceProvider);
+    ttsService.onStateChanged = (state) {
+      if (mounted) {
+        ref.read(ttsStateProvider.notifier).state = state;
+        // Clear playing message ID when TTS stops
+        if (state != TtsState.speaking) {
+          ref.read(ttsPlayingMessageIdProvider.notifier).state = null;
+        }
+      }
+    };
   }
 
   Future<void> _ensureModelLoaded() async {
@@ -220,12 +237,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   itemBuilder: (context, index) {
                     if (index < messages.length) {
                       final msg = messages[index];
+                      final ttsPlayingId = ref.watch(ttsPlayingMessageIdProvider);
                       return MessageBubble(
                         message: msg,
                         key: ValueKey(msg.id),
                         onEdit: msg.role == MessageRole.user && !isGenerating
                             ? () => _editAndResend(msg)
                             : null,
+                        isTtsPlaying: ttsPlayingId == msg.id,
+                        onTtsPlay: () => _handleTtsPlay(msg),
+                        onTtsStop: () => _handleTtsStop(),
                       );
                     }
                     // Streaming message
@@ -261,6 +282,71 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _handleTtsPlay(Message message) async {
+    final ttsService = ref.read(ttsServiceProvider);
+
+    // Check if model is downloaded
+    final isReady = await ttsService.isModelDownloaded();
+    if (!isReady) {
+      // Show download confirmation dialog
+      if (!mounted) return;
+      final shouldDownload = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('下载语音模型'),
+          content: const Text(
+            'TTS语音模型尚未下载（约182MB）。\n是否现在下载？',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('下载'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldDownload != true || !mounted) return;
+
+      // Show download progress dialog
+      _showTtsDownloadDialog();
+      return;
+    }
+
+    // Model ready — speak
+    ref.read(ttsPlayingMessageIdProvider.notifier).state = message.id;
+    final ok = await ttsService.speak(message.content);
+    if (!ok && mounted) {
+      ref.read(ttsPlayingMessageIdProvider.notifier).state = null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('朗读失败，请重试'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleTtsStop() async {
+    final ttsService = ref.read(ttsServiceProvider);
+    await ttsService.stop();
+    ref.read(ttsPlayingMessageIdProvider.notifier).state = null;
+  }
+
+  void _showTtsDownloadDialog() {
+    final ttsService = ref.read(ttsServiceProvider);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => TtsDownloadDialog(ttsService: ttsService),
     );
   }
 

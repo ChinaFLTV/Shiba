@@ -4,6 +4,7 @@ import 'package:local_model/data/repositories/model_repository.dart';
 import 'package:local_model/data/services/download_service.dart';
 import 'package:local_model/data/services/hf_api_service.dart';
 import 'package:local_model/data/services/llm_service.dart';
+import 'package:local_model/data/services/tts_service.dart';
 
 final conversationRepoProvider = Provider((ref) => ConversationRepository());
 final modelRepoProvider = Provider((ref) => ModelRepository());
@@ -13,3 +14,4 @@ final downloadServiceProvider = Provider((ref) {
   return DownloadService(modelRepo);
 });
 final llmServiceProvider = Provider((ref) => LlmService());
+final ttsServiceProvider = Provider((ref) => TtsService());

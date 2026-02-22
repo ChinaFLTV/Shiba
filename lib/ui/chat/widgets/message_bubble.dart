@@ -7,12 +7,18 @@ class MessageBubble extends StatefulWidget {
   final Message message;
   final bool isStreaming;
   final VoidCallback? onEdit;
+  final VoidCallback? onTtsPlay;
+  final VoidCallback? onTtsStop;
+  final bool isTtsPlaying;
 
   const MessageBubble({
     super.key,
     required this.message,
     this.isStreaming = false,
     this.onEdit,
+    this.onTtsPlay,
+    this.onTtsStop,
+    this.isTtsPlaying = false,
   });
 
   @override
@@ -118,6 +124,19 @@ class _MessageBubbleState extends State<MessageBubble> {
                             tooltip: '编辑并重发',
                             onTap: widget.onEdit!,
                           ),
+                        // TTS read-aloud button (for assistant messages)
+                        if (!isUser)
+                          widget.isTtsPlaying
+                              ? _ActionBtn(
+                                  icon: Icons.stop_circle_outlined,
+                                  tooltip: '停止朗读',
+                                  onTap: widget.onTtsStop ?? () {},
+                                )
+                              : _ActionBtn(
+                                  icon: Icons.volume_up_outlined,
+                                  tooltip: '朗读',
+                                  onTap: widget.onTtsPlay ?? () {},
+                                ),
                       ],
                     ),
                   ),
