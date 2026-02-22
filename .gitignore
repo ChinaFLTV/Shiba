@@ -6,13 +6,13 @@ build/
 .packages
 pubspec.lock
 *.iml
+.metadata
 
 # Generated
 lib/generated_plugin_registrant.dart
 **/GeneratedPluginRegistrant.java
 **/GeneratedPluginRegistrant.h
 **/GeneratedPluginRegistrant.m
-./.flutter-plugins-dependencies
 
 # IDE
 .idea/
@@ -31,9 +31,10 @@ android/captures/
 **/*.jks
 **/*.keystore
 
-# iOS
-ios/.symlinks/
+# iOS (most rules in ios/.gitignore)
 ios/Pods/
+ios/Podfile.lock
+ios/.symlinks/
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
 ios/Flutter/ephemeral/
