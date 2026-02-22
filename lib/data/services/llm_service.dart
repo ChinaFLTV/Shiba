@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:llamadart/llamadart.dart';
 import 'package:shiba/core/constants.dart';
 import 'package:shiba/core/cpu_feature_checker.dart';
+import 'package:shiba/core/gpu_stability_checker.dart';
 import 'package:shiba/data/models/message.dart';
 
 /// Service for local LLM inference using llamadart (llama.cpp binding).
@@ -16,9 +17,18 @@ class LlmService {
   LlamaBackend? _backend;
   bool _isLoaded = false;
   bool _hasVision = false;
+  String? _loadedModelPath;
+
+  /// Set to true after a Vulkan DeviceLost crash during vision inference.
+  /// Prevents further vision attempts on this device until app restart.
+  bool _vulkanVisionBlocked = false;
+
+  /// Set to true when the native engine isolate is suspected to have crashed.
+  /// Requires a full engine reset before any further operations.
+  bool _engineCrashed = false;
 
   bool get isLoaded => _isLoaded;
-  bool get hasVision => _hasVision;
+  bool get hasVision => _hasVision && !_vulkanVisionBlocked;
 
   /// Lazily initialize the engine (and its backend isolate) once.
   Future<LlamaEngine> _ensureEngine() async {
@@ -48,6 +58,8 @@ class LlmService {
     }
     _isLoaded = false;
     _hasVision = false;
+    _loadedModelPath = null;
+    _engineCrashed = false;
   }
 
   /// Safely unload model, tolerating errors.
@@ -59,6 +71,12 @@ class LlmService {
     } catch (e) {
       debugPrint('[LLM] safeUnload error (ignored): $e');
     }
+  }
+
+  void _markModelLoaded(String modelPath) {
+    _isLoaded = true;
+    _hasVision = false; // mmproj must be reloaded after each model load
+    _loadedModelPath = modelPath;
   }
 
   /// Validate that a file starts with the GGUF magic bytes.
@@ -149,6 +167,7 @@ class LlmService {
   Future<(bool, String?)> loadModel(
     String modelPath, {
     void Function(double progress)? onLoadProgress,
+    bool forceCpuOnly = false,
   }) async {
     final diagnostics = StringBuffer();
     final fileName = modelPath.split('/').last;
@@ -158,6 +177,12 @@ class LlmService {
       final file = File(modelPath);
       if (!await file.exists()) {
         return (false, '模型文件不存在: $modelPath');
+      }
+
+      // If engine previously crashed, force a full reset before reloading
+      if (_engineCrashed) {
+        debugPrint('[LLM] Engine was in crashed state, performing full reset');
+        await _resetEngine();
       }
       final fileSize = await file.length();
       if (fileSize == 0) {
@@ -201,6 +226,9 @@ class LlmService {
       diagnostics.writeln('元数据KV数: $metadataKvCount');
       diagnostics.writeln('文件指纹: $headHash');
       diagnostics.writeln('GGUF校验: 通过');
+      if (forceCpuOnly) {
+        diagnostics.writeln('加载策略: 强制CPU（多模态稳定性模式）');
+      }
 
       // --- CPU feature compatibility check (Android arm64) ---
       final cpuCompatible = await CpuFeatureChecker.isCompatible();
@@ -245,33 +273,39 @@ class LlmService {
         diagnostics.writeln('VRAM: 获取失败');
       }
 
-      // --- Stage 1: Resolved backend (e.g. Vulkan on Android), default context ---
-      debugPrint(
-          '[LLM] Stage 1: ${resolvedBackend.name}, ctx=${AppConstants.defaultContextSize}');
       if (_isLoaded) {
         await _safeUnload(engine);
         _isLoaded = false;
+        _hasVision = false;
       }
 
-      try {
-        await engine.loadModel(
-          modelPath,
-          modelParams: ModelParams(
-            contextSize: AppConstants.defaultContextSize,
-            preferredBackend: resolvedBackend,
-            gpuLayers: resolvedBackend == GpuBackend.cpu ? 0 : 32,
-          ),
-        );
-        _isLoaded = true;
-        debugPrint('[LLM] Stage 1 SUCCESS');
-        return (true, null);
-      } catch (e) {
-        final msg = _extractError(e);
-        debugPrint('[LLM] Stage 1 FAILED: $msg');
-        diagnostics.writeln(
-            '--- 阶段1失败 (${resolvedBackend.name}, ctx=${AppConstants.defaultContextSize}) ---');
-        diagnostics.writeln(msg);
-        await _safeUnload(engine);
+      // --- Stage 1: Resolved backend (e.g. Vulkan on Android), default context ---
+      if (!forceCpuOnly) {
+        debugPrint(
+            '[LLM] Stage 1: ${resolvedBackend.name}, ctx=${AppConstants.defaultContextSize}');
+        try {
+          final gpuLayers = resolvedBackend == GpuBackend.cpu ? 0 : 32;
+          await engine.loadModel(
+            modelPath,
+            modelParams: ModelParams(
+              contextSize: AppConstants.defaultContextSize,
+              preferredBackend: resolvedBackend,
+              gpuLayers: gpuLayers,
+            ),
+          );
+          _markModelLoaded(modelPath);
+          debugPrint('[LLM] Stage 1 SUCCESS');
+          return (true, null);
+        } catch (e) {
+          final msg = _extractError(e);
+          debugPrint('[LLM] Stage 1 FAILED: $msg');
+          diagnostics.writeln(
+              '--- 阶段1失败 (${resolvedBackend.name}, ctx=${AppConstants.defaultContextSize}) ---');
+          diagnostics.writeln(msg);
+          await _safeUnload(engine);
+        }
+      } else {
+        diagnostics.writeln('--- 阶段1跳过 (强制CPU模式) ---');
       }
 
       // --- Stage 2: CPU-only, default context ---
@@ -285,7 +319,7 @@ class LlmService {
             preferredBackend: GpuBackend.cpu,
           ),
         );
-        _isLoaded = true;
+        _markModelLoaded(modelPath);
         debugPrint('[LLM] Stage 2 SUCCESS');
         return (true, null);
       } catch (e) {
@@ -308,7 +342,7 @@ class LlmService {
             preferredBackend: GpuBackend.cpu,
           ),
         );
-        _isLoaded = true;
+        _markModelLoaded(modelPath);
         debugPrint('[LLM] Stage 3 SUCCESS');
         return (true, null);
       } catch (e) {
@@ -334,7 +368,7 @@ class LlmService {
             preferredBackend: GpuBackend.cpu,
           ),
         );
-        _isLoaded = true;
+        _markModelLoaded(modelPath);
         debugPrint('[LLM] Stage 4 SUCCESS');
         return (true, null);
       } catch (e) {
@@ -347,6 +381,7 @@ class LlmService {
 
       // --- All stages failed ---
       _isLoaded = false;
+      _loadedModelPath = null;
       diagnostics.writeln('');
       diagnostics.writeln('=== 建议 ===');
       diagnostics.writeln('所有加载方式均失败，可能原因：');
@@ -361,6 +396,7 @@ class LlmService {
       return (false, fullDiag);
     } catch (e) {
       _isLoaded = false;
+      _loadedModelPath = null;
       final msg = _extractError(e);
       debugPrint('[LLM] Unexpected error: $msg');
       return (false, '加载异常: $msg');
@@ -397,8 +433,33 @@ class LlmService {
   }) {
     final controller = StreamController<String>();
 
+    if (_engineCrashed) {
+      controller.addError(Exception(
+        '推理引擎已崩溃，请返回重新加载模型。\n'
+        '如果反复崩溃，请尝试禁用图片功能或使用纯文本对话。',
+      ));
+      controller.close();
+      return controller.stream;
+    }
+
     if (!_isLoaded || _engine == null) {
       controller.addError(Exception(ErrorMessages.modelLoadFailed));
+      controller.close();
+      return controller.stream;
+    }
+
+    final hasImageInput =
+        messages.any((m) => m.role == MessageRole.user && m.hasImage);
+    if (hasImageInput && !_hasVision) {
+      controller.addError(Exception('当前模型未启用图片理解能力，请确认已加载匹配的 mmproj 文件'));
+      controller.close();
+      return controller.stream;
+    }
+    if (hasImageInput && _vulkanVisionBlocked) {
+      controller.addError(Exception(
+        '该设备GPU不支持稳定的视觉推理，图片功能已禁用。\n'
+        '请使用纯文本对话。',
+      ));
       controller.close();
       return controller.stream;
     }
@@ -435,10 +496,24 @@ class LlmService {
       onError: (error) {
         if (!controller.isClosed) {
           final errorStr = error.toString().toLowerCase();
-          // Detect isolate/native crash patterns that indicate SIGILL
-          if (errorStr.contains('isolate') ||
-              errorStr.contains('killed') ||
-              errorStr.contains('signal')) {
+          if (_isVulkanCrashError(errorStr)) {
+            // Vulkan DeviceLost — mark vision as blocked and engine as crashed
+            _vulkanVisionBlocked = true;
+            _engineCrashed = true;
+            _isLoaded = false;
+            _hasVision = false;
+            debugPrint('[LLM] Vulkan DeviceLost detected during inference. '
+                'Vision blocked, engine marked crashed. '
+                'GPU: ${GpuStabilityChecker.gpuInfo ?? "unknown"}');
+            controller.addError(Exception(
+              '${ErrorMessages.vulkanVisionCrash}\n'
+              'GPU: ${GpuStabilityChecker.gpuInfo ?? "unknown"}',
+            ));
+          } else if (_isNativeCrashError(errorStr)) {
+            // Generic native crash (SIGILL, isolate killed, etc.)
+            _engineCrashed = true;
+            _isLoaded = false;
+            _hasVision = false;
             controller.addError(Exception(
               '${ErrorMessages.inferenceCrashed}\n'
               '可能原因：设备CPU指令集不兼容（缺少I8MM）。\n'
@@ -458,6 +533,22 @@ class LlmService {
     };
 
     return controller.stream;
+  }
+
+  /// Check if the error indicates a Vulkan DeviceLost crash.
+  static bool _isVulkanCrashError(String errorStr) {
+    return errorStr.contains('devicelost') ||
+        errorStr.contains('device_lost') ||
+        errorStr.contains('device lost') ||
+        errorStr.contains('vk::') ||
+        errorStr.contains('vulkan');
+  }
+
+  /// Check if the error indicates a native isolate/process crash.
+  static bool _isNativeCrashError(String errorStr) {
+    return errorStr.contains('isolate') ||
+        errorStr.contains('killed') ||
+        errorStr.contains('signal');
   }
 
   /// Build llamaDart chat messages from local message history.
@@ -485,10 +576,10 @@ class LlmService {
 
       if (msg.role == MessageRole.user && msg.hasImage && _hasVision) {
         final parts = <LlamaContentPart>[
-          LlamaImageContent(path: msg.imagePath!),
           LlamaTextContent(
             msg.content.trim().isNotEmpty ? msg.content : '请描述这张图片。',
           ),
+          LlamaImageContent(path: msg.imagePath!),
         ];
         result.add(LlamaChatMessage.withContent(role: role, content: parts));
         continue;
@@ -547,13 +638,60 @@ class LlmService {
     if (!_isLoaded || _engine == null) {
       return (false, 'Model not loaded');
     }
+    if (_vulkanVisionBlocked) {
+      return (false, '该设备GPU不支持稳定的Vulkan视觉推理，图片功能已禁用');
+    }
     try {
       final file = File(mmProjPath);
       if (!await file.exists()) {
         return (false, 'Vision projector file not found: $mmProjPath');
       }
+      if (Platform.isAndroid) {
+        // Check GPU stability for vision inference.
+        // llamadart v0.6.1 does not expose the mtmd_context_params.use_gpu
+        // flag, so the clip vision encoder always uses Vulkan when available.
+        // On Adreno GPUs this causes vk::DeviceLostError → SIGABRT during
+        // clip_image_batch_encode. Block vision entirely on affected devices.
+        final vulkanStable =
+            await GpuStabilityChecker.isVulkanStableForVision();
+        if (!vulkanStable) {
+          debugPrint(
+              '[LLM] Adreno/Qualcomm GPU detected (${GpuStabilityChecker.gpuInfo}). '
+              'Vulkan vision inference is known to cause DeviceLost crashes. '
+              'Blocking vision to prevent fatal SIGABRT.');
+          _vulkanVisionBlocked = true;
+          return (
+            false,
+            '该设备GPU（${GpuStabilityChecker.gpuInfo ?? "Adreno"}）的Vulkan驱动'
+                '在图像编码时存在已知崩溃问题（DeviceLost），图片功能已禁用。\n'
+                '纯文本对话不受影响。'
+          );
+        }
+
+        final currentModelPath = _loadedModelPath;
+        if (currentModelPath == null) {
+          return (false, '当前模型路径丢失，无法切换CPU后端后再加载视觉投影器');
+        }
+        debugPrint(
+            '[LLM] Android vision safety mode: resetting engine and reloading model with CPU backend before loading mmproj');
+        await _resetEngine();
+        final (reloadOk, reloadError) =
+            await loadModel(currentModelPath, forceCpuOnly: true);
+        if (!reloadOk) {
+          return (
+            false,
+            '为避免Android图像推理崩溃，已尝试切换CPU后端但失败: ${reloadError ?? "未知错误"}'
+          );
+        }
+      }
       await _engine!.loadMultimodalProjector(mmProjPath);
-      _hasVision = true;
+      final supportsVision = await _engine!.supportsVision;
+      _hasVision = supportsVision;
+      if (!supportsVision) {
+        debugPrint(
+            '[LLM] Vision projector loaded but model does not report vision support: ${mmProjPath.split('/').last}');
+        return (false, '视觉投影器已加载，但当前模型未启用图片理解能力（可能 mmproj 与主模型不匹配）');
+      }
       debugPrint(
           '[LLM] Vision projector loaded: ${mmProjPath.split('/').last}');
       return (true, null);
@@ -570,6 +708,7 @@ class LlmService {
       await _safeUnload(_engine!);
       _isLoaded = false;
       _hasVision = false;
+      _loadedModelPath = null;
     }
   }
 

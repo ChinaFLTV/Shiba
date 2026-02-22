@@ -101,7 +101,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         if (success) {
           _loadError = null;
           // Try to load vision projector if available
-          _tryLoadVisionProjector(llmService, selectedModel.repoId);
+          _tryLoadVisionProjector(llmService, selectedModel);
         } else {
           _loadError = _buildLoadErrorMessage(error, selectedModel.filePath);
         }
@@ -112,32 +112,53 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   /// Attempt to find and load a mmproj file for vision support.
   /// Searches downloaded models from the same repo for mmproj files.
   Future<void> _tryLoadVisionProjector(
-      LlmService llmService, String repoId) async {
+      LlmService llmService, LocalModel selectedModel) async {
+    final repoId = selectedModel.repoId;
     final models = await ref.read(modelRepoProvider).getCompletedModels();
-    final mmproj = models
+    final mmprojCandidates = models
         .where((m) =>
             m.repoId == repoId &&
             m.filename.toLowerCase().contains('mmproj') &&
             m.status == ModelStatus.completed)
-        .firstOrNull;
-    if (mmproj != null) {
+        .toList();
+
+    mmprojCandidates.sort((a, b) {
+      final scoreA = _scoreMmprojCandidate(selectedModel, a);
+      final scoreB = _scoreMmprojCandidate(selectedModel, b);
+      if (scoreA != scoreB) return scoreB.compareTo(scoreA);
+      final createdAtCompare = b.createdAt.compareTo(a.createdAt);
+      if (createdAtCompare != 0) return createdAtCompare;
+      return a.filename.compareTo(b.filename);
+    });
+
+    String? lastError;
+    for (final mmproj in mmprojCandidates) {
       final file = File(mmproj.filePath);
       if (await file.exists()) {
         final (ok, error) =
             await llmService.loadVisionProjector(mmproj.filePath);
-        if (!ok && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error ?? '视觉投影器加载失败'),
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 6),
-            ),
-          );
+        lastError = error;
+        if (ok) {
+          if (mounted) setState(() {}); // refresh UI to show image button
+          return;
         }
-        if (mounted) setState(() {}); // refresh UI to show image button
-        return;
       }
     }
+
+    if (mmprojCandidates.isNotEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(lastError ?? '视觉投影器加载失败，请检查 mmproj 是否与当前模型匹配'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+        setState(() {}); // ensure image button remains hidden when unsupported
+      }
+      return;
+    }
+
     // Show hint if model looks multimodal but mmproj is missing
     if (_looksMultimodal(repoId) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,6 +169,45 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ),
       );
     }
+  }
+
+  static int _scoreMmprojCandidate(LocalModel baseModel, LocalModel mmproj) {
+    final modelTokens = _mmprojMatchTokens(baseModel.filename);
+    final mmprojTokens = _mmprojMatchTokens(mmproj.filename);
+    var score = 0;
+    for (final token in mmprojTokens) {
+      if (modelTokens.contains(token)) {
+        score += 10;
+      }
+    }
+
+    final lower = mmproj.filename.toLowerCase();
+    if (lower.contains('f16') || lower.contains('fp16')) score += 3;
+    if (lower.startsWith('mmproj')) score += 1;
+    return score;
+  }
+
+  static Set<String> _mmprojMatchTokens(String filename) {
+    final lower = filename.toLowerCase();
+    final rawTokens = lower
+        .replaceAll('.gguf', '')
+        .split(RegExp(r'[^a-z0-9]+'))
+        .where((t) => t.isNotEmpty);
+    final tokens = <String>{};
+    for (final token in rawTokens) {
+      if (_isMmprojNoiseToken(token)) continue;
+      tokens.add(token);
+    }
+    return tokens;
+  }
+
+  static bool _isMmprojNoiseToken(String token) {
+    if (token == 'gguf' || token == 'mmproj' || token == 'model') return true;
+    if (token == 'f16' || token == 'fp16' || token == 'bf16') return true;
+    if (RegExp(r'^q\d+$').hasMatch(token)) return true;
+    if (RegExp(r'^q\d+[a-z0-9_]*$').hasMatch(token)) return true;
+    if (RegExp(r'^iq\d+[a-z0-9_]*$').hasMatch(token)) return true;
+    return false;
   }
 
   /// Heuristic check if a repo likely contains a multimodal (vision) model.

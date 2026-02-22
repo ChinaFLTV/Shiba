@@ -34,4 +34,8 @@ class ErrorMessages {
       '已知不兼容的SoC：Snapdragon 860/870/865及更早型号。\n'
       '建议在支持ARMv8.6-A的设备上使用（如Snapdragon 8 Gen1及以上）。';
   static const String databaseError = '数据库操作失败';
+  static const String vulkanVisionCrash =
+      '图片推理过程中GPU驱动崩溃（Vulkan DeviceLost）。\n'
+      '该设备的GPU不支持稳定的Vulkan视觉推理。\n'
+      '已自动标记，下次将跳过图片功能以避免崩溃。';
 }
