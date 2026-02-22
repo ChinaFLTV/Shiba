@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:local_model/core/constants.dart';
+import 'package:local_model/data/database/database_helper.dart';
 import 'package:local_model/data/services/tts_service.dart';
 import 'package:local_model/providers/service_providers.dart';
 
@@ -16,3 +18,33 @@ final ttsModelReadyProvider = FutureProvider<bool>((ref) async {
 /// TTS model download progress: (received, total)
 final ttsDownloadProgressProvider =
     StateProvider<(int, int)>((ref) => (0, 0));
+
+/// Persisted TTS settings (speed only — current MeloTTS zh-en model has 1 speaker)
+final ttsSettingsProvider =
+    StateNotifierProvider<TtsSettingsNotifier, TtsSettings>(
+        (ref) => TtsSettingsNotifier());
+
+class TtsSettings {
+  final double speed;
+  const TtsSettings({this.speed = AppConstants.defaultTtsSpeed});
+}
+
+const _ttsSpeedKey = 'tts_speed';
+
+class TtsSettingsNotifier extends StateNotifier<TtsSettings> {
+  TtsSettingsNotifier() : super(const TtsSettings()) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final spd = await DatabaseHelper.instance.getSetting(_ttsSpeedKey);
+    state = TtsSettings(
+      speed: spd != null ? double.tryParse(spd) ?? AppConstants.defaultTtsSpeed : AppConstants.defaultTtsSpeed,
+    );
+  }
+
+  Future<void> setSpeed(double speed) async {
+    state = TtsSettings(speed: speed);
+    await DatabaseHelper.instance.setSetting(_ttsSpeedKey, speed.toString());
+  }
+}

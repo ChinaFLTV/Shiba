@@ -59,6 +59,8 @@ class SettingsPage extends ConsumerWidget {
           // TTS section
           const _SectionTitle(title: '语音合成 (TTS)'),
           _TtsModelCard(),
+          const SizedBox(height: 4),
+          _TtsParamsCard(),
 
           const SizedBox(height: 16),
 
@@ -277,5 +279,47 @@ class _TtsModelCardState extends ConsumerState<_TtsModelCard> {
       ref.invalidate(ttsModelReadyProvider);
       _checkStatus();
     }
+  }
+}
+
+class _TtsParamsCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(ttsSettingsProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.speed_outlined, size: 20),
+            const SizedBox(width: 8),
+            const Text('语速'),
+            Expanded(
+              child: Slider(
+                value: settings.speed,
+                min: 0.5,
+                max: 2.0,
+                divisions: 15,
+                label: '${settings.speed.toStringAsFixed(1)}x',
+                onChanged: (v) {
+                  ref.read(ttsSettingsProvider.notifier).setSpeed(
+                        double.parse(v.toStringAsFixed(1)),
+                      );
+                },
+              ),
+            ),
+            SizedBox(
+              width: 40,
+              child: Text(
+                '${settings.speed.toStringAsFixed(1)}x',
+                style: const TextStyle(fontSize: 13),
+                textAlign: TextAlign.end,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

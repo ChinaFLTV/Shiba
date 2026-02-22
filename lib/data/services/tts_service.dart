@@ -25,6 +25,11 @@ class TtsService {
   TtsState _state = TtsState.idle;
   TtsState get state => _state;
 
+  /// Monotonically increasing sequence ID to detect stale speak() calls.
+  /// When a new speak() or stop() is invoked, _speakSeqId increments,
+  /// causing any in-flight isolate generation to discard its result.
+  int _speakSeqId = 0;
+
   /// Callback for state changes (UI can listen to this)
   void Function(TtsState state)? onStateChanged;
 
@@ -338,13 +343,18 @@ class TtsService {
   Future<bool> speak(String text, {double speed = 1.0, int sid = 0}) async {
     if (text.trim().isEmpty) return false;
 
-    // Stop any current playback
+    // Stop any current playback and invalidate in-flight generation
     await stop();
 
     if (!await isModelDownloaded()) {
       debugPrint('[TTS] Model not downloaded');
       return false;
     }
+
+    // Capture a sequence ID for this speak call. If stop() or another
+    // speak() is called while the isolate is running, _speakSeqId will
+    // change and we discard the stale result instead of playing it.
+    final seqId = ++_speakSeqId;
 
     _setState(TtsState.speaking);
 
@@ -376,7 +386,13 @@ class TtsService {
         speed: speed,
         wavPath: wavPath,
       );
-      final ok = await Isolate.run(() => _generateInIsolate(params));
+      final ok = await _runTtsInIsolate(params);
+
+      // Check if this speak call has been superseded by a newer one
+      if (seqId != _speakSeqId) {
+        debugPrint('[TTS] Speak call superseded, discarding result');
+        return false;
+      }
 
       if (!ok) {
         debugPrint('[TTS] Generation failed in isolate');
@@ -493,8 +509,9 @@ class TtsService {
         .trim();
   }
 
-  /// Stop current playback
+  /// Stop current playback and invalidate any in-flight generation
   Future<void> stop() async {
+    _speakSeqId++; // Invalidate any pending isolate result
     _playerCompleteSub?.cancel();
     _playerCompleteSub = null;
     await _player.stop();
@@ -515,6 +532,13 @@ class TtsService {
     await stop();
     await _player.dispose();
   }
+}
+
+/// Top-level function to run TTS generation in a background isolate.
+/// Must be top-level (not a closure inside an instance method) to avoid
+/// capturing `this` which contains unsendable objects like AudioPlayer.
+Future<bool> _runTtsInIsolate(_TtsGenerateParams params) {
+  return Isolate.run(() => TtsService._generateInIsolate(params));
 }
 
 /// Model file descriptor

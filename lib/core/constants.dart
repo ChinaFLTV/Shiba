@@ -13,6 +13,9 @@ class AppConstants {
   static const double defaultTopP = 0.9;
   static const int defaultTopK = 40;
   static const int defaultMaxTokens = 1024;
+
+  // TTS defaults
+  static const double defaultTtsSpeed = 1.0;
 }
 
 class ErrorMessages {

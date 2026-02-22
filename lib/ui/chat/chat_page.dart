@@ -27,6 +27,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final ScrollController _scrollController = ScrollController();
   bool _modelLoading = false;
   String? _loadError;
+  /// Cached reference to TtsService for use in dispose() where ref is unavailable.
+  late final TtsService _ttsService;
+  /// Cached notifier references for cleanup in dispose().
+  late final StateController<String?> _ttsPlayingIdNotifier;
+  late final StateController<TtsState> _ttsStateNotifier;
+  /// True while speak() is in progress, suppresses auto-clearing of playing ID.
+  bool _ttsSpeaking = false;
 
   @override
   void initState() {
@@ -38,14 +45,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   void _setupTtsCallbacks() {
-    final ttsService = ref.read(ttsServiceProvider);
-    ttsService.onStateChanged = (state) {
+    _ttsService = ref.read(ttsServiceProvider);
+    _ttsPlayingIdNotifier = ref.read(ttsPlayingMessageIdProvider.notifier);
+    _ttsStateNotifier = ref.read(ttsStateProvider.notifier);
+    _ttsService.onStateChanged = (state) {
       if (mounted) {
-        ref.read(ttsStateProvider.notifier).state = state;
-        // Clear playing message ID when TTS stops
-        if (state != TtsState.speaking) {
-          ref.read(ttsPlayingMessageIdProvider.notifier).state = null;
-        }
+        _ttsStateNotifier.state = state;
       }
     };
   }
@@ -107,6 +112,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   void dispose() {
+    _ttsService.onStateChanged = null;
+    _ttsService.stop();
+    // Defer provider state reset to after the widget tree finalize phase,
+    // as Riverpod forbids synchronous state modifications during dispose/unmount.
+    Future.microtask(() {
+      _ttsPlayingIdNotifier.state = null;
+      _ttsStateNotifier.state = TtsState.idle;
+    });
     _scrollController.dispose();
     super.dispose();
   }
@@ -123,6 +136,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     // Auto-scroll when streaming
     ref.listen(streamingTextProvider, (_, __) => _scrollToBottom());
+
+    // Clear playing message ID when TTS finishes naturally (state goes idle).
+    // Suppressed during speak() calls to avoid clearing the ID mid-switch.
+    ref.listen(ttsStateProvider, (prev, next) {
+      if (next == TtsState.idle && !_ttsSpeaking && _ttsPlayingIdNotifier.state != null) {
+        _ttsPlayingIdNotifier.state = null;
+      }
+    });
 
     // Show generation errors (e.g. native crash / CPU incompatibility)
     ref.listen(generationErrorProvider, (_, error) {
@@ -320,10 +341,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _handleTtsPlay(Message message) async {
-    final ttsService = ref.read(ttsServiceProvider);
-
     // Check if model is downloaded
-    final isReady = await ttsService.isModelDownloaded();
+    final isReady = await _ttsService.isModelDownloaded();
     if (!isReady) {
       // Show download confirmation dialog
       if (!mounted) return;
@@ -355,10 +374,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
 
     // Model ready — speak
-    ref.read(ttsPlayingMessageIdProvider.notifier).state = message.id;
-    final ok = await ttsService.speak(message.content);
+    _ttsPlayingIdNotifier.state = message.id;
+    _ttsSpeaking = true;
+    final ttsSettings = ref.read(ttsSettingsProvider);
+    final ok = await _ttsService.speak(
+      message.content,
+      speed: ttsSettings.speed,
+    );
+    _ttsSpeaking = false;
     if (!ok && mounted) {
-      ref.read(ttsPlayingMessageIdProvider.notifier).state = null;
+      _ttsPlayingIdNotifier.state = null;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('朗读失败，请重试'),
@@ -369,18 +394,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _handleTtsStop() async {
-    final ttsService = ref.read(ttsServiceProvider);
-    await ttsService.stop();
-    ref.read(ttsPlayingMessageIdProvider.notifier).state = null;
+    await _ttsService.stop();
+    _ttsPlayingIdNotifier.state = null;
   }
 
   void _showTtsDownloadDialog() {
-    final ttsService = ref.read(ttsServiceProvider);
-
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => TtsDownloadDialog(ttsService: ttsService),
+      builder: (ctx) => TtsDownloadDialog(ttsService: _ttsService),
     );
   }
 
