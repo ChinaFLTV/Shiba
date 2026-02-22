@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/data/models/hf_model.dart';
-import 'package:local_model/providers/model_providers.dart';
-import 'package:local_model/ui/models/model_files_page.dart';
+import 'package:shiba/data/models/hf_model.dart';
+import 'package:shiba/providers/model_providers.dart';
+import 'package:shiba/ui/models/model_files_page.dart';
 
 class ModelSearchPage extends ConsumerStatefulWidget {
   const ModelSearchPage({super.key});

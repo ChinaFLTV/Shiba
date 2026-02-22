@@ -1,6 +1,6 @@
-import 'package:local_model/data/database/database_helper.dart';
-import 'package:local_model/data/models/conversation.dart';
-import 'package:local_model/data/models/message.dart';
+import 'package:shiba/data/database/database_helper.dart';
+import 'package:shiba/data/models/conversation.dart';
+import 'package:shiba/data/models/message.dart';
 
 class ConversationRepository {
   Future<List<Conversation>> getAllConversations() async {

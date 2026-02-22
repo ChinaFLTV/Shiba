@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/data/repositories/conversation_repository.dart';
-import 'package:local_model/data/repositories/model_repository.dart';
-import 'package:local_model/data/services/download_service.dart';
-import 'package:local_model/data/services/hf_api_service.dart';
-import 'package:local_model/data/services/llm_service.dart';
-import 'package:local_model/data/services/tts_service.dart';
+import 'package:shiba/data/repositories/conversation_repository.dart';
+import 'package:shiba/data/repositories/model_repository.dart';
+import 'package:shiba/data/services/download_service.dart';
+import 'package:shiba/data/services/hf_api_service.dart';
+import 'package:shiba/data/services/llm_service.dart';
+import 'package:shiba/data/services/tts_service.dart';
 
 final conversationRepoProvider = Provider((ref) => ConversationRepository());
 final modelRepoProvider = Provider((ref) => ModelRepository());

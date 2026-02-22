@@ -7,7 +7,7 @@
         android:maxSdkVersion="32"/>
 
     <application
-        android:label="本地大模型"
+        android:label="Shiba"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:largeHeap="true"

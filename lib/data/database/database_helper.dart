@@ -1,6 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:local_model/core/constants.dart';
+import 'package:shiba/core/constants.dart';
 
 class DatabaseHelper {
   DatabaseHelper._();

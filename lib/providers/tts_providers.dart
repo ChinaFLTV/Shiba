@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/core/constants.dart';
-import 'package:local_model/data/database/database_helper.dart';
-import 'package:local_model/data/services/tts_service.dart';
-import 'package:local_model/providers/service_providers.dart';
+import 'package:shiba/core/constants.dart';
+import 'package:shiba/data/database/database_helper.dart';
+import 'package:shiba/data/services/tts_service.dart';
+import 'package:shiba/providers/service_providers.dart';
 
 /// Current TTS playback state
 final ttsStateProvider = StateProvider<TtsState>((ref) => TtsState.idle);

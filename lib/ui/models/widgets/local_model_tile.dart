@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/data/models/local_model.dart';
-import 'package:local_model/providers/model_providers.dart';
-import 'package:local_model/providers/service_providers.dart';
+import 'package:shiba/data/models/local_model.dart';
+import 'package:shiba/providers/model_providers.dart';
+import 'package:shiba/providers/service_providers.dart';
 
 class LocalModelTile extends ConsumerStatefulWidget {
   final LocalModel model;

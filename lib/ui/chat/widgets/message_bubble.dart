@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
-import 'package:local_model/data/models/message.dart';
+import 'package:shiba/data/models/message.dart';
 
 class MessageBubble extends StatefulWidget {
   final Message message;

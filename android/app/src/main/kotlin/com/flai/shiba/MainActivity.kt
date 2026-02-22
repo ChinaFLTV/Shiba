@@ -1,4 +1,4 @@
-package com.flai.localmodel
+package com.flai.shiba
 
 import io.flutter.embedding.android.FlutterActivity
 

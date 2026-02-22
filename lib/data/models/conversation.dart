@@ -1,4 +1,4 @@
-import 'package:local_model/core/constants.dart';
+import 'package:shiba/core/constants.dart';
 
 class Conversation {
   final String id;

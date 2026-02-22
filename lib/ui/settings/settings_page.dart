@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/app.dart';
-import 'package:local_model/core/constants.dart';
-import 'package:local_model/providers/service_providers.dart';
-import 'package:local_model/providers/tts_providers.dart';
-import 'package:local_model/ui/shared/tts_download_dialog.dart';
+import 'package:shiba/app.dart';
+import 'package:shiba/core/constants.dart';
+import 'package:shiba/providers/service_providers.dart';
+import 'package:shiba/providers/tts_providers.dart';
+import 'package:shiba/ui/shared/tts_download_dialog.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -95,7 +95,7 @@ class SettingsPage extends ConsumerWidget {
 
           Center(
             child: Text(
-              '本地大模型 · 所有推理均在设备上完成',
+              'Shiba · 所有推理均在设备上完成',
               style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.outline),

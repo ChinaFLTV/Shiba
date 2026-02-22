@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:local_model/data/services/tts_service.dart';
+import 'package:shiba/data/services/tts_service.dart';
 
 /// Reusable dialog for downloading TTS model with progress, speed, and cancel.
 class TtsDownloadDialog extends StatefulWidget {

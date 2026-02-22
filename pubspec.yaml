@@ -1,5 +1,5 @@
-name: local_model
-description: 本地大模型 - 在手机上运行AI大模型并进行对话
+name: shiba
+description: Shiba - 在手机上运行AI大模型并进行对话
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -55,6 +55,14 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   riverpod_generator: ^2.6.2
   build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
 
 flutter:
   uses-material-design: true

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/data/models/local_model.dart';
-import 'package:local_model/providers/model_providers.dart';
-import 'package:local_model/ui/models/model_search_page.dart';
-import 'package:local_model/ui/models/widgets/local_model_tile.dart';
+import 'package:shiba/data/models/local_model.dart';
+import 'package:shiba/providers/model_providers.dart';
+import 'package:shiba/ui/models/model_search_page.dart';
+import 'package:shiba/ui/models/widgets/local_model_tile.dart';
 
 class ModelsPage extends ConsumerWidget {
   const ModelsPage({super.key});

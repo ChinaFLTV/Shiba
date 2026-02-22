@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'package:local_model/data/models/conversation.dart';
-import 'package:local_model/data/models/message.dart';
-import 'package:local_model/core/constants.dart';
-import 'package:local_model/providers/service_providers.dart';
-import 'package:local_model/providers/model_providers.dart';
+import 'package:shiba/data/models/conversation.dart';
+import 'package:shiba/data/models/message.dart';
+import 'package:shiba/core/constants.dart';
+import 'package:shiba/providers/service_providers.dart';
+import 'package:shiba/providers/model_providers.dart';
 
 const _uuid = Uuid();
 

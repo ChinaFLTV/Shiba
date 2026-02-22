@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appName = '本地大模型';
+  static const String appName = 'Shiba';
   static const String hfMirrorBaseUrl = 'https://hf-mirror.com';
   static const String hfApiModelsUrl = '$hfMirrorBaseUrl/api/models';
   static const String modelsSubDir = 'models';

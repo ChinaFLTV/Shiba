@@ -3,17 +3,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/core/constants.dart';
-import 'package:local_model/data/models/conversation.dart';
-import 'package:local_model/data/models/message.dart';
-import 'package:local_model/data/services/tts_service.dart';
-import 'package:local_model/providers/chat_providers.dart';
-import 'package:local_model/providers/model_providers.dart';
-import 'package:local_model/providers/service_providers.dart';
-import 'package:local_model/providers/tts_providers.dart';
-import 'package:local_model/ui/chat/widgets/chat_input_bar.dart';
-import 'package:local_model/ui/chat/widgets/message_bubble.dart';
-import 'package:local_model/ui/shared/tts_download_dialog.dart';
+import 'package:shiba/core/constants.dart';
+import 'package:shiba/data/models/conversation.dart';
+import 'package:shiba/data/models/message.dart';
+import 'package:shiba/data/services/tts_service.dart';
+import 'package:shiba/providers/chat_providers.dart';
+import 'package:shiba/providers/model_providers.dart';
+import 'package:shiba/providers/service_providers.dart';
+import 'package:shiba/providers/tts_providers.dart';
+import 'package:shiba/ui/chat/widgets/chat_input_bar.dart';
+import 'package:shiba/ui/chat/widgets/message_bubble.dart';
+import 'package:shiba/ui/shared/tts_download_dialog.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   final Conversation conversation;
@@ -486,7 +486,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     .headlineSmall
                     ?.copyWith(color: colorScheme.primary)),
             const SizedBox(height: 8),
-            Text('输入你的问题，与本地大模型对话',
+            Text('输入你的问题，与Shiba对话',
                 style: TextStyle(color: colorScheme.outline)),
           ],
         ),

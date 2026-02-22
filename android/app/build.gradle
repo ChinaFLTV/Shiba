@@ -23,7 +23,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.flai.localmodel"
+    namespace "com.flai.shiba"
     compileSdk 36
     ndkVersion "27.0.12077973"
 
@@ -41,7 +41,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.flai.localmodel"
+        applicationId "com.flai.shiba"
         minSdk 33
         targetSdk 36
         versionCode flutterVersionCode.toInteger()

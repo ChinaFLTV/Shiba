@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:local_model/core/constants.dart';
-import 'package:local_model/data/models/hf_model.dart';
+import 'package:shiba/core/constants.dart';
+import 'package:shiba/data/models/hf_model.dart';
 
 class HfApiService {
   late final Dio _dio;

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/core/theme/app_theme.dart';
-import 'package:local_model/data/database/database_helper.dart';
-import 'package:local_model/ui/home/home_page.dart';
+import 'package:shiba/core/theme/app_theme.dart';
+import 'package:shiba/data/database/database_helper.dart';
+import 'package:shiba/ui/home/home_page.dart';
 
 const _themeModeKey = 'theme_mode';
 
@@ -13,7 +13,7 @@ class LocalModelApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
-      title: '本地大模型',
+      title: 'Shiba',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

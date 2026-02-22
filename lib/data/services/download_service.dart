@@ -2,9 +2,9 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:local_model/core/constants.dart';
-import 'package:local_model/data/models/local_model.dart';
-import 'package:local_model/data/repositories/model_repository.dart';
+import 'package:shiba/core/constants.dart';
+import 'package:shiba/data/models/local_model.dart';
+import 'package:shiba/data/repositories/model_repository.dart';
 
 class DownloadService {
   final ModelRepository _modelRepo;

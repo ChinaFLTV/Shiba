@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'package:local_model/data/models/hf_model.dart';
-import 'package:local_model/data/models/local_model.dart';
-import 'package:local_model/providers/model_providers.dart';
-import 'package:local_model/providers/service_providers.dart';
+import 'package:shiba/data/models/hf_model.dart';
+import 'package:shiba/data/models/local_model.dart';
+import 'package:shiba/providers/model_providers.dart';
+import 'package:shiba/providers/service_providers.dart';
 
 const _uuid = Uuid();
 

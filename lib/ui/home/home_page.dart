@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_model/ui/chat/chat_list_page.dart';
-import 'package:local_model/ui/models/models_page.dart';
-import 'package:local_model/ui/settings/settings_page.dart';
+import 'package:shiba/ui/chat/chat_list_page.dart';
+import 'package:shiba/ui/models/models_page.dart';
+import 'package:shiba/ui/settings/settings_page.dart';
 
 final homeTabProvider = StateProvider<int>((ref) => 0);
 

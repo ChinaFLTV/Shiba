@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'package:local_model/data/database/database_helper.dart';
-import 'package:local_model/data/models/local_model.dart';
+import 'package:shiba/data/database/database_helper.dart';
+import 'package:shiba/data/models/local_model.dart';
 
 class ModelRepository {
   Future<List<LocalModel>> getAllModels() async {

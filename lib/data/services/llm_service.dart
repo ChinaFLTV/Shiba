@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:llamadart/llamadart.dart';
-import 'package:local_model/core/constants.dart';
-import 'package:local_model/core/cpu_feature_checker.dart';
-import 'package:local_model/data/models/message.dart';
+import 'package:shiba/core/constants.dart';
+import 'package:shiba/core/cpu_feature_checker.dart';
+import 'package:shiba/data/models/message.dart';
 
 /// Service for local LLM inference using llamadart (llama.cpp binding).
 ///
