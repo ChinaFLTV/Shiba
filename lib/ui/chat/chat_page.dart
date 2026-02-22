@@ -124,6 +124,40 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Auto-scroll when streaming
     ref.listen(streamingTextProvider, (_, __) => _scrollToBottom());
 
+    // Show generation errors (e.g. native crash / CPU incompatibility)
+    ref.listen(generationErrorProvider, (_, error) {
+      if (error != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error, maxLines: 4, overflow: TextOverflow.ellipsis),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 8),
+            action: SnackBarAction(
+              label: '详情',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('推理错误'),
+                    content: SingleChildScrollView(
+                      child: SelectableText(error,
+                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('关闭'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: Column(

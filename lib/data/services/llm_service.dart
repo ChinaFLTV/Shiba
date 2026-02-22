@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:llamadart/llamadart.dart';
 import 'package:local_model/core/constants.dart';
+import 'package:local_model/core/cpu_feature_checker.dart';
 import 'package:local_model/data/models/message.dart';
 
 /// Service for local LLM inference using llamadart (llama.cpp binding).
@@ -185,6 +186,23 @@ class LlmService {
       diagnostics.writeln('元数据KV数: $metadataKvCount');
       diagnostics.writeln('文件指纹: $headHash');
       diagnostics.writeln('GGUF校验: 通过');
+
+      // --- CPU feature compatibility check (Android arm64) ---
+      final cpuCompatible = await CpuFeatureChecker.isCompatible();
+      final socName = CpuFeatureChecker.socInfo;
+      if (socName != null) {
+        diagnostics.writeln('SoC: $socName');
+      }
+      diagnostics.writeln('I8MM支持: $cpuCompatible');
+      if (!cpuCompatible) {
+        _isLoaded = false;
+        diagnostics.writeln('');
+        diagnostics.writeln('=== CPU不兼容 ===');
+        diagnostics.writeln(ErrorMessages.cpuIncompatible);
+        final fullDiag = diagnostics.toString();
+        debugPrint('[LLM] CPU INCOMPATIBLE:\n$fullDiag');
+        return (false, fullDiag);
+      }
 
       // --- Collect engine diagnostics ---
       final engine = await _ensureEngine();
@@ -391,7 +409,19 @@ class LlmService {
       },
       onError: (error) {
         if (!controller.isClosed) {
-          controller.addError(error);
+          final errorStr = error.toString().toLowerCase();
+          // Detect isolate/native crash patterns that indicate SIGILL
+          if (errorStr.contains('isolate') ||
+              errorStr.contains('killed') ||
+              errorStr.contains('signal')) {
+            controller.addError(Exception(
+              '${ErrorMessages.inferenceCrashed}\n'
+              '可能原因：设备CPU指令集不兼容（缺少I8MM）。\n'
+              'SoC: ${CpuFeatureChecker.socInfo ?? "unknown"}',
+            ));
+          } else {
+            controller.addError(error);
+          }
           controller.close();
         }
       },
@@ -438,11 +468,16 @@ class LlmService {
       stopSequences: ['<|im_end|>', '<|end|>', '</s>', '<|eot_id|>', '\n'],
     );
 
-    final buffer = StringBuffer();
-    await for (final token in _engine!.generate(prompt, params: params)) {
-      buffer.write(token);
+    try {
+      final buffer = StringBuffer();
+      await for (final token in _engine!.generate(prompt, params: params)) {
+        buffer.write(token);
+      }
+      return buffer.toString().trim();
+    } catch (e) {
+      debugPrint('[LLM] generateOnce error: $e');
+      return '';
     }
-    return buffer.toString().trim();
   }
 
   /// Stop current generation.

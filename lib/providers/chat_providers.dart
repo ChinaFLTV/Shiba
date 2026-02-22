@@ -149,6 +149,9 @@ final isGeneratingProvider = StateProvider<bool>((ref) => false);
 /// Streaming response text (accumulated)
 final streamingTextProvider = StateProvider<String>((ref) => '');
 
+/// Last generation error (shown to user, cleared on next send)
+final generationErrorProvider = StateProvider<String?>((ref) => null);
+
 /// Chat controller for managing generation
 final chatControllerProvider = Provider((ref) => ChatController(ref));
 
@@ -168,6 +171,7 @@ class ChatController {
 
     _ref.read(isGeneratingProvider.notifier).state = true;
     _ref.read(streamingTextProvider.notifier).state = '';
+    _ref.read(generationErrorProvider.notifier).state = null;
     _buffer.clear();
 
     // Add user message
@@ -212,6 +216,8 @@ class ChatController {
         await _ref.read(messagesProvider.notifier).refresh();
       },
       onError: (error) {
+        debugPrint('[Chat] Generation error: $error');
+        _ref.read(generationErrorProvider.notifier).state = error.toString();
         _ref.read(isGeneratingProvider.notifier).state = false;
         _ref.read(streamingTextProvider.notifier).state = '';
         _buffer.clear();
