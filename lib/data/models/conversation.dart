@@ -12,6 +12,7 @@ class Conversation {
   final int topK;
   final double topP;
   final int maxTokens;
+  final int historyRounds;
 
   const Conversation({
     required this.id,
@@ -25,6 +26,7 @@ class Conversation {
     this.topK = AppConstants.defaultTopK,
     this.topP = AppConstants.defaultTopP,
     this.maxTokens = AppConstants.defaultMaxTokens,
+    this.historyRounds = AppConstants.defaultHistoryRounds,
   });
 
   Map<String, dynamic> toMap() => {
@@ -39,6 +41,7 @@ class Conversation {
         'top_k': topK,
         'top_p': topP,
         'max_tokens': maxTokens,
+        'history_rounds': historyRounds,
       };
 
   factory Conversation.fromMap(Map<String, dynamic> map) => Conversation(
@@ -51,11 +54,13 @@ class Conversation {
         updatedAt:
             DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int),
         systemPrompt: map['system_prompt'] as String? ?? '',
-        temperature:
-            (map['temperature'] as num?)?.toDouble() ?? AppConstants.defaultTemperature,
+        temperature: (map['temperature'] as num?)?.toDouble() ??
+            AppConstants.defaultTemperature,
         topK: map['top_k'] as int? ?? AppConstants.defaultTopK,
         topP: (map['top_p'] as num?)?.toDouble() ?? AppConstants.defaultTopP,
         maxTokens: map['max_tokens'] as int? ?? AppConstants.defaultMaxTokens,
+        historyRounds:
+            map['history_rounds'] as int? ?? AppConstants.defaultHistoryRounds,
       );
 
   Conversation copyWith({
@@ -66,6 +71,7 @@ class Conversation {
     int? topK,
     double? topP,
     int? maxTokens,
+    int? historyRounds,
   }) =>
       Conversation(
         id: id,
@@ -79,5 +85,6 @@ class Conversation {
         topK: topK ?? this.topK,
         topP: topP ?? this.topP,
         maxTokens: maxTokens ?? this.maxTokens,
+        historyRounds: historyRounds ?? this.historyRounds,
       );
 }

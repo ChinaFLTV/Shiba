@@ -87,16 +87,22 @@ class LlmService {
       final raf = file.openSync(mode: FileMode.read);
       try {
         raf.setPositionSync(4); // skip magic
-        final bytes = raf.readSync(24); // version(4) + tensor_count(8) + metadata_kv_count(8)
+        final bytes = raf.readSync(
+            24); // version(4) + tensor_count(8) + metadata_kv_count(8)
         if (bytes.length >= 4) {
-          result['version'] = bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
+          result['version'] =
+              bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24);
         }
         if (bytes.length >= 12) {
           // tensor_count is uint64 LE, but we only need lower 32 bits for practical models
-          result['tensor_count'] = bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) | (bytes[7] << 24);
+          result['tensor_count'] =
+              bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) | (bytes[7] << 24);
         }
         if (bytes.length >= 20) {
-          result['metadata_kv_count'] = bytes[12] | (bytes[13] << 8) | (bytes[14] << 16) | (bytes[15] << 24);
+          result['metadata_kv_count'] = bytes[12] |
+              (bytes[13] << 8) |
+              (bytes[14] << 16) |
+              (bytes[15] << 24);
         }
       } finally {
         raf.closeSync();
@@ -158,8 +164,11 @@ class LlmService {
         return (false, '模型文件为空（0字节），请删除后重新下载');
       }
       if (!_isValidGguf(file)) {
-        return (false, '模型文件格式无效（非GGUF），可能下载不完整，请删除后重新下载\n'
-            '文件大小: ${_fmtBytes(fileSize)}');
+        return (
+          false,
+          '模型文件格式无效（非GGUF），可能下载不完整，请删除后重新下载\n'
+              '文件大小: ${_fmtBytes(fileSize)}'
+        );
       }
 
       // --- GGUF header deep validation ---
@@ -170,8 +179,11 @@ class LlmService {
 
       // GGUF v3 is required for llama.cpp b7898+
       if (ggufVersion < 3) {
-        return (false, 'GGUF版本过低 (v$ggufVersion)，需要 v3+\n'
-            '请下载更新版本的GGUF模型文件');
+        return (
+          false,
+          'GGUF版本过低 (v$ggufVersion)，需要 v3+\n'
+              '请下载更新版本的GGUF模型文件'
+        );
       }
 
       // Sanity check: tensor count should be > 0 for any valid model
@@ -227,13 +239,15 @@ class LlmService {
       }
       try {
         final vram = await engine.getVramInfo();
-        diagnostics.writeln('VRAM: total=${_fmtBytes(vram.total)}, free=${_fmtBytes(vram.free)}');
+        diagnostics.writeln(
+            'VRAM: total=${_fmtBytes(vram.total)}, free=${_fmtBytes(vram.free)}');
       } catch (e) {
         diagnostics.writeln('VRAM: 获取失败');
       }
 
       // --- Stage 1: Resolved backend (e.g. Vulkan on Android), default context ---
-      debugPrint('[LLM] Stage 1: ${resolvedBackend.name}, ctx=${AppConstants.defaultContextSize}');
+      debugPrint(
+          '[LLM] Stage 1: ${resolvedBackend.name}, ctx=${AppConstants.defaultContextSize}');
       if (_isLoaded) {
         await _safeUnload(engine);
         _isLoaded = false;
@@ -254,7 +268,8 @@ class LlmService {
       } catch (e) {
         final msg = _extractError(e);
         debugPrint('[LLM] Stage 1 FAILED: $msg');
-        diagnostics.writeln('--- 阶段1失败 (${resolvedBackend.name}, ctx=${AppConstants.defaultContextSize}) ---');
+        diagnostics.writeln(
+            '--- 阶段1失败 (${resolvedBackend.name}, ctx=${AppConstants.defaultContextSize}) ---');
         diagnostics.writeln(msg);
         await _safeUnload(engine);
       }
@@ -276,7 +291,8 @@ class LlmService {
       } catch (e) {
         final msg = _extractError(e);
         debugPrint('[LLM] Stage 2 FAILED: $msg');
-        diagnostics.writeln('--- 阶段2失败 (CPU, ctx=${AppConstants.defaultContextSize}) ---');
+        diagnostics.writeln(
+            '--- 阶段2失败 (CPU, ctx=${AppConstants.defaultContextSize}) ---');
         diagnostics.writeln(msg);
         await _safeUnload(engine);
       }
@@ -378,7 +394,6 @@ class LlmService {
     double topP = AppConstants.defaultTopP,
     int topK = AppConstants.defaultTopK,
     String systemPrompt = '',
-    String? imagePath,
   }) {
     final controller = StreamController<String>();
 
@@ -388,7 +403,8 @@ class LlmService {
       return controller.stream;
     }
 
-    final prompt = _buildPrompt(messages, systemPrompt: systemPrompt);
+    final chatMessages =
+        _buildChatMessages(messages, systemPrompt: systemPrompt);
 
     final params = GenerationParams(
       temp: temperature,
@@ -399,16 +415,15 @@ class LlmService {
       stopSequences: ['<|im_end|>', '<|end|>', '</s>', '<|eot_id|>'],
     );
 
-    // Build multimodal parts if image is provided
-    List<LlamaContentPart>? parts;
-    if (imagePath != null && _hasVision) {
-      parts = [LlamaImageContent(path: imagePath)];
-    }
-
     StreamSubscription<String>? sub;
-    sub = _engine!.generate(prompt, params: params, parts: parts).listen(
+    sub = _engine!
+        .create(chatMessages, params: params)
+        .map((chunk) => chunk.choices.isEmpty
+            ? ''
+            : (chunk.choices.first.delta.content ?? ''))
+        .listen(
       (token) {
-        if (!controller.isClosed) {
+        if (!controller.isClosed && token.isNotEmpty) {
           controller.add(token);
         }
       },
@@ -445,19 +460,49 @@ class LlmService {
     return controller.stream;
   }
 
-  /// Build a ChatML-formatted prompt from message history.
-  String _buildPrompt(List<Message> messages, {String systemPrompt = ''}) {
-    final buffer = StringBuffer();
+  /// Build llamaDart chat messages from local message history.
+  List<LlamaChatMessage> _buildChatMessages(
+    List<Message> messages, {
+    String systemPrompt = '',
+  }) {
+    final result = <LlamaChatMessage>[];
     final sysMsg = systemPrompt.isNotEmpty
         ? systemPrompt
         : 'You are a helpful AI assistant.';
-    buffer.writeln('<|im_start|>system\n$sysMsg<|im_end|>');
+    result.add(
+      LlamaChatMessage.fromText(
+        role: LlamaChatRole.system,
+        text: sysMsg,
+      ),
+    );
+
     for (final msg in messages) {
-      final role = msg.role == MessageRole.user ? 'user' : 'assistant';
-      buffer.writeln('<|im_start|>$role\n${msg.content}<|im_end|>');
+      final role = switch (msg.role) {
+        MessageRole.user => LlamaChatRole.user,
+        MessageRole.assistant => LlamaChatRole.assistant,
+        MessageRole.system => LlamaChatRole.system,
+      };
+
+      if (msg.role == MessageRole.user && msg.hasImage && _hasVision) {
+        final parts = <LlamaContentPart>[
+          LlamaImageContent(path: msg.imagePath!),
+          LlamaTextContent(
+            msg.content.trim().isNotEmpty ? msg.content : '请描述这张图片。',
+          ),
+        ];
+        result.add(LlamaChatMessage.withContent(role: role, content: parts));
+        continue;
+      }
+
+      result.add(
+        LlamaChatMessage.fromText(
+          role: role,
+          text: msg.content,
+        ),
+      );
     }
-    buffer.write('<|im_start|>assistant\n');
-    return buffer.toString();
+
+    return result;
   }
 
   /// Generate a complete (non-streaming) response for a raw prompt.
@@ -509,7 +554,8 @@ class LlmService {
       }
       await _engine!.loadMultimodalProjector(mmProjPath);
       _hasVision = true;
-      debugPrint('[LLM] Vision projector loaded: ${mmProjPath.split('/').last}');
+      debugPrint(
+          '[LLM] Vision projector loaded: ${mmProjPath.split('/').last}');
       return (true, null);
     } catch (e) {
       debugPrint('[LLM] Failed to load vision projector: $e');

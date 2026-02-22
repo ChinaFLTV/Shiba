@@ -70,7 +70,8 @@ class ChatInputBarState extends State<ChatInputBar> {
 
   void _handleSend() {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    final hasImage = widget.pendingImagePath != null;
+    if (text.isEmpty && !hasImage) return;
     widget.onSend(text, imagePath: widget.pendingImagePath);
     _controller.clear();
     widget.onImageChanged(null);
@@ -81,8 +82,10 @@ class ChatInputBarState extends State<ChatInputBar> {
     final compress = widget.imageCompressEnabled;
     final xFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: compress ? (widget.imageMaxResolution ?? 1024).toDouble() : null,
-      maxHeight: compress ? (widget.imageMaxResolution ?? 1024).toDouble() : null,
+      maxWidth:
+          compress ? (widget.imageMaxResolution ?? 1024).toDouble() : null,
+      maxHeight:
+          compress ? (widget.imageMaxResolution ?? 1024).toDouble() : null,
       imageQuality: compress ? (widget.imageQuality ?? 85) : null,
     );
     if (xFile != null) {
@@ -137,8 +140,8 @@ class ChatInputBarState extends State<ChatInputBar> {
                           color: colorScheme.surface.withValues(alpha: 0.8),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.close, size: 14,
-                            color: colorScheme.onSurface),
+                        child: Icon(Icons.close,
+                            size: 14, color: colorScheme.onSurface),
                       ),
                     ),
                   ),
@@ -156,8 +159,8 @@ class ChatInputBarState extends State<ChatInputBar> {
                   onPressed: widget.enabled && !widget.isGenerating
                       ? _pickImage
                       : null,
-                  icon: Icon(Icons.image_outlined, size: 22,
-                      color: hasImage ? colorScheme.primary : null),
+                  icon: Icon(Icons.image_outlined,
+                      size: 22, color: hasImage ? colorScheme.primary : null),
                   tooltip: '选择图片',
                 ),
               Expanded(

@@ -18,7 +18,7 @@ class DatabaseHelper {
     final path = join(dbPath, AppConstants.dbName);
     return openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -37,7 +37,8 @@ class DatabaseHelper {
         temperature REAL NOT NULL DEFAULT 0.7,
         top_k INTEGER NOT NULL DEFAULT 40,
         top_p REAL NOT NULL DEFAULT 0.9,
-        max_tokens INTEGER NOT NULL DEFAULT 1024
+        max_tokens INTEGER NOT NULL DEFAULT 1024,
+        history_rounds INTEGER NOT NULL DEFAULT 6
       )
     ''');
     await db.execute('''
@@ -87,14 +88,23 @@ class DatabaseHelper {
       ''');
     }
     if (oldVersion < 3) {
-      await db.execute("ALTER TABLE conversations ADD COLUMN system_prompt TEXT NOT NULL DEFAULT ''");
-      await db.execute('ALTER TABLE conversations ADD COLUMN temperature REAL NOT NULL DEFAULT 0.7');
-      await db.execute('ALTER TABLE conversations ADD COLUMN top_k INTEGER NOT NULL DEFAULT 40');
-      await db.execute('ALTER TABLE conversations ADD COLUMN top_p REAL NOT NULL DEFAULT 0.9');
-      await db.execute('ALTER TABLE conversations ADD COLUMN max_tokens INTEGER NOT NULL DEFAULT 1024');
+      await db.execute(
+          "ALTER TABLE conversations ADD COLUMN system_prompt TEXT NOT NULL DEFAULT ''");
+      await db.execute(
+          'ALTER TABLE conversations ADD COLUMN temperature REAL NOT NULL DEFAULT 0.7');
+      await db.execute(
+          'ALTER TABLE conversations ADD COLUMN top_k INTEGER NOT NULL DEFAULT 40');
+      await db.execute(
+          'ALTER TABLE conversations ADD COLUMN top_p REAL NOT NULL DEFAULT 0.9');
+      await db.execute(
+          'ALTER TABLE conversations ADD COLUMN max_tokens INTEGER NOT NULL DEFAULT 1024');
     }
     if (oldVersion < 4) {
       await db.execute('ALTER TABLE messages ADD COLUMN image_path TEXT');
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+          'ALTER TABLE conversations ADD COLUMN history_rounds INTEGER NOT NULL DEFAULT 6');
     }
   }
 

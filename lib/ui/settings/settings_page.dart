@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/app.dart';
 import 'package:shiba/core/constants.dart';
+import 'package:shiba/providers/chat_defaults_provider.dart';
 import 'package:shiba/providers/image_settings_provider.dart';
 import 'package:shiba/providers/service_providers.dart';
 import 'package:shiba/providers/tts_providers.dart';
@@ -59,15 +60,20 @@ class SettingsPage extends ConsumerWidget {
 
           // TTS section
           const _SectionTitle(title: '语音合成 (TTS)'),
-          _TtsModelCard(),
+          const _TtsModelCard(),
           const SizedBox(height: 4),
-          _TtsParamsCard(),
+          const _TtsParamsCard(),
 
           const SizedBox(height: 16),
 
           // Image compression section
           const _SectionTitle(title: '图片处理'),
-          _ImageSettingsCard(),
+          const _ImageSettingsCard(),
+
+          const SizedBox(height: 16),
+
+          const _SectionTitle(title: '对话默认参数'),
+          const _ChatDefaultsCard(),
 
           const SizedBox(height: 16),
 
@@ -104,8 +110,7 @@ class SettingsPage extends ConsumerWidget {
             child: Text(
               'Shiba · 所有推理均在设备上完成',
               style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.outline),
+                  fontSize: 12, color: Theme.of(context).colorScheme.outline),
             ),
           ),
           const SizedBox(height: 8),
@@ -128,6 +133,269 @@ class _SectionTitle extends StatelessWidget {
               .textTheme
               .titleSmall
               ?.copyWith(color: Theme.of(context).colorScheme.primary)),
+    );
+  }
+}
+
+class _ChatDefaultsCard extends ConsumerStatefulWidget {
+  const _ChatDefaultsCard();
+
+  @override
+  ConsumerState<_ChatDefaultsCard> createState() => _ChatDefaultsCardState();
+}
+
+class _ChatDefaultsCardState extends ConsumerState<_ChatDefaultsCard> {
+  late final TextEditingController _systemPromptCtrl;
+  late double _temperature;
+  late int _topK;
+  late double _topP;
+  late int _maxTokens;
+  late int _historyRounds;
+  bool _initialized = false;
+  bool _dirty = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _systemPromptCtrl = TextEditingController();
+    _apply(ref.read(chatDefaultsProvider));
+  }
+
+  void _apply(ChatDefaults settings) {
+    _systemPromptCtrl.text = settings.systemPrompt;
+    _temperature = settings.temperature;
+    _topK = settings.topK;
+    _topP = settings.topP;
+    _maxTokens = settings.maxTokens;
+    _historyRounds = settings.historyRounds;
+    _initialized = true;
+  }
+
+  bool _matches(ChatDefaults settings) {
+    return _systemPromptCtrl.text == settings.systemPrompt &&
+        _temperature == settings.temperature &&
+        _topK == settings.topK &&
+        _topP == settings.topP &&
+        _maxTokens == settings.maxTokens &&
+        _historyRounds == settings.historyRounds;
+  }
+
+  Future<void> _save() async {
+    final notifier = ref.read(chatDefaultsProvider.notifier);
+    await notifier.save(ChatDefaults(
+      systemPrompt: _systemPromptCtrl.text.trim(),
+      temperature: _temperature,
+      topK: _topK,
+      topP: _topP,
+      maxTokens: _maxTokens,
+      historyRounds: _historyRounds,
+    ));
+    if (mounted) {
+      setState(() => _dirty = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('全局默认对话参数已保存'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  void _restoreDefaults() {
+    setState(() {
+      _dirty = true;
+      _systemPromptCtrl.clear();
+      _temperature = AppConstants.defaultTemperature;
+      _topK = AppConstants.defaultTopK;
+      _topP = AppConstants.defaultTopP;
+      _maxTokens = AppConstants.defaultMaxTokens;
+      _historyRounds = AppConstants.defaultHistoryRounds;
+    });
+  }
+
+  @override
+  void dispose() {
+    _systemPromptCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final remote = ref.watch(chatDefaultsProvider);
+    ref.listen(chatDefaultsProvider, (prev, next) {
+      if (!mounted || _dirty) return;
+      setState(() {
+        _apply(next);
+      });
+    });
+
+    if (!_initialized || (!_dirty && !_matches(remote))) {
+      _apply(remote);
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _systemPromptCtrl,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: const InputDecoration(
+                labelText: '默认系统提示词',
+                hintText: '新对话默认使用；可在对话设置中覆盖',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (_) {
+                if (!_dirty) setState(() => _dirty = true);
+              },
+            ),
+            const SizedBox(height: 8),
+            _ParamSliderRow(
+              label: 'Temperature',
+              value: _temperature,
+              min: 0,
+              max: 2,
+              divisions: 20,
+              display: _temperature.toStringAsFixed(1),
+              onChanged: (v) => setState(() {
+                _dirty = true;
+                _temperature = v;
+              }),
+            ),
+            _ParamSliderRow(
+              label: 'Top K',
+              value: _topK.toDouble(),
+              min: 1,
+              max: 100,
+              divisions: 99,
+              display: '$_topK',
+              onChanged: (v) => setState(() {
+                _dirty = true;
+                _topK = v.round();
+              }),
+            ),
+            _ParamSliderRow(
+              label: 'Top P',
+              value: _topP,
+              min: 0,
+              max: 1,
+              divisions: 20,
+              display: _topP.toStringAsFixed(2),
+              onChanged: (v) => setState(() {
+                _dirty = true;
+                _topP = v;
+              }),
+            ),
+            _ParamSliderRow(
+              label: '最大生成长度',
+              value: _maxTokens.toDouble(),
+              min: 64,
+              max: 4096,
+              divisions: 63,
+              display: '$_maxTokens',
+              onChanged: (v) => setState(() {
+                _dirty = true;
+                _maxTokens = v.round();
+              }),
+            ),
+            _ParamSliderRow(
+              label: '历史轮数',
+              value: _historyRounds.toDouble(),
+              min: 0,
+              max: 20,
+              divisions: 20,
+              display: _historyRounds == 0 ? '全部' : '$_historyRounds',
+              onChanged: (v) => setState(() {
+                _dirty = true;
+                _historyRounds = v.round();
+              }),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, top: 2, bottom: 8),
+              child: Text(
+                '新建对话默认 history messages 使用该轮数；0 表示全部历史',
+                style: TextStyle(fontSize: 12, color: colorScheme.outline),
+              ),
+            ),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _restoreDefaults,
+                  icon:
+                      Icon(Icons.restore, size: 18, color: colorScheme.outline),
+                  label: Text(
+                    '恢复默认',
+                    style: TextStyle(fontSize: 13, color: colorScheme.outline),
+                  ),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: _dirty ? _save : null,
+                  child: const Text('保存'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ParamSliderRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final String display;
+  final ValueChanged<double> onChanged;
+
+  const _ParamSliderRow({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.display,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(label, style: const TextStyle(fontSize: 13)),
+          ),
+          Expanded(
+            child: Slider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              divisions: divisions,
+              onChanged: onChanged,
+            ),
+          ),
+          SizedBox(
+            width: 52,
+            child: Text(
+              display,
+              style: const TextStyle(fontSize: 13),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -172,6 +440,8 @@ class _AboutTile extends StatelessWidget {
 }
 
 class _TtsModelCard extends ConsumerStatefulWidget {
+  const _TtsModelCard();
+
   @override
   ConsumerState<_TtsModelCard> createState() => _TtsModelCardState();
 }
@@ -290,6 +560,8 @@ class _TtsModelCardState extends ConsumerState<_TtsModelCard> {
 }
 
 class _TtsParamsCard extends ConsumerWidget {
+  const _TtsParamsCard();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(ttsSettingsProvider);
@@ -332,6 +604,8 @@ class _TtsParamsCard extends ConsumerWidget {
 }
 
 class _ImageSettingsCard extends ConsumerWidget {
+  const _ImageSettingsCard();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(imageSettingsProvider);

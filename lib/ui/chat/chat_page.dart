@@ -3,11 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shiba/core/constants.dart';
 import 'package:shiba/data/models/conversation.dart';
 import 'package:shiba/data/models/local_model.dart';
 import 'package:shiba/data/models/message.dart';
+import 'package:shiba/data/services/llm_service.dart';
 import 'package:shiba/data/services/tts_service.dart';
+import 'package:shiba/providers/chat_defaults_provider.dart';
 import 'package:shiba/providers/chat_providers.dart';
 import 'package:shiba/providers/image_settings_provider.dart';
 import 'package:shiba/providers/model_providers.dart';
@@ -31,13 +32,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _modelLoading = false;
   String? _loadError;
   String? _expandedMessageId;
+
   /// Message pending edit-and-resend (set when user taps edit, cleared on send).
   Message? _editPendingMessage;
+
   /// Cached reference to TtsService for use in dispose() where ref is unavailable.
   late final TtsService _ttsService;
+
   /// Cached notifier references for cleanup in dispose().
   late final StateController<String?> _ttsPlayingIdNotifier;
   late final StateController<TtsState> _ttsStateNotifier;
+
   /// True while speak() is in progress, suppresses auto-clearing of playing ID.
   bool _ttsSpeaking = false;
 
@@ -106,16 +111,29 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   /// Attempt to find and load a mmproj file for vision support.
   /// Searches downloaded models from the same repo for mmproj files.
-  Future<void> _tryLoadVisionProjector(dynamic llmService, String repoId) async {
+  Future<void> _tryLoadVisionProjector(
+      LlmService llmService, String repoId) async {
     final models = await ref.read(modelRepoProvider).getCompletedModels();
-    final mmproj = models.where((m) =>
-        m.repoId == repoId &&
-        m.filename.toLowerCase().contains('mmproj') &&
-        m.status == ModelStatus.completed).firstOrNull;
+    final mmproj = models
+        .where((m) =>
+            m.repoId == repoId &&
+            m.filename.toLowerCase().contains('mmproj') &&
+            m.status == ModelStatus.completed)
+        .firstOrNull;
     if (mmproj != null) {
       final file = File(mmproj.filePath);
       if (await file.exists()) {
-        await llmService.loadVisionProjector(mmproj.filePath);
+        final (ok, error) =
+            await llmService.loadVisionProjector(mmproj.filePath);
+        if (!ok && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(error ?? '视觉投影器加载失败'),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 6),
+            ),
+          );
+        }
         if (mounted) setState(() {}); // refresh UI to show image button
         return;
       }
@@ -178,7 +196,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final currentConv = ref.watch(currentConversationProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final displayTitle = currentConv?.title ?? widget.conversation.title;
-    final displayModel = currentConv?.modelName ?? widget.conversation.modelName;
+    final displayModel =
+        currentConv?.modelName ?? widget.conversation.modelName;
 
     // Auto-scroll when streaming
     ref.listen(streamingTextProvider, (_, __) => _scrollToBottom());
@@ -186,7 +205,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Clear playing message ID when TTS finishes naturally (state goes idle).
     // Suppressed during speak() calls to avoid clearing the ID mid-switch.
     ref.listen(ttsStateProvider, (prev, next) {
-      if (next == TtsState.idle && !_ttsSpeaking && _ttsPlayingIdNotifier.state != null) {
+      if (next == TtsState.idle &&
+          !_ttsSpeaking &&
+          _ttsPlayingIdNotifier.state != null) {
         _ttsPlayingIdNotifier.state = null;
       }
     });
@@ -208,7 +229,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     title: const Text('推理错误'),
                     content: SingleChildScrollView(
                       child: SelectableText(error,
-                          style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
+                          style: const TextStyle(
+                              fontSize: 12, fontFamily: 'monospace')),
                     ),
                     actions: [
                       TextButton(
@@ -291,13 +313,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         content: SingleChildScrollView(
                           child: SelectableText(
                             _loadError!,
-                            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                            style: const TextStyle(
+                                fontSize: 12, fontFamily: 'monospace'),
                           ),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () {
-                              Clipboard.setData(ClipboardData(text: _loadError!));
+                              Clipboard.setData(
+                                  ClipboardData(text: _loadError!));
                               Navigator.pop(ctx);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -324,8 +348,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           // Messages list
           Expanded(
             child: messagesAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('$e')),
               data: (messages) {
                 if (messages.isEmpty && !isGenerating) {
@@ -338,7 +361,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   itemBuilder: (context, index) {
                     if (index < messages.length) {
                       final msg = messages[index];
-                      final ttsPlayingId = ref.watch(ttsPlayingMessageIdProvider);
+                      final ttsPlayingId =
+                          ref.watch(ttsPlayingMessageIdProvider);
                       return MessageBubble(
                         message: msg,
                         key: ValueKey(msg.id),
@@ -363,9 +387,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         id: 'streaming',
                         conversationId: '',
                         role: MessageRole.assistant,
-                        content: streamingText.isEmpty
-                            ? '...'
-                            : streamingText,
+                        content: streamingText.isEmpty ? '...' : streamingText,
                         createdAt: DateTime.now(),
                       ),
                       isStreaming: true,
@@ -383,10 +405,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             isGenerating: isGenerating,
             visionEnabled: ref.watch(llmServiceProvider).hasVision,
             pendingImagePath: ref.watch(pendingImageProvider),
-            imageCompressEnabled: ref.watch(imageSettingsProvider).compressEnabled,
+            imageCompressEnabled:
+                ref.watch(imageSettingsProvider).compressEnabled,
             imageMaxResolution: ref.watch(imageSettingsProvider).maxResolution,
             imageQuality: ref.watch(imageSettingsProvider).quality,
-            onSend: (text, {String? imagePath}) => _handleSend(text, imagePath: imagePath),
+            onSend: (text, {String? imagePath}) =>
+                _handleSend(text, imagePath: imagePath),
             onStop: () {
               ref.read(chatControllerProvider).stopGeneration();
             },
@@ -492,7 +516,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final pending = _editPendingMessage!;
       setState(() => _editPendingMessage = null);
       ref.read(messagesProvider.notifier).deleteMessagesFrom(pending).then((_) {
-        ref.read(chatControllerProvider).sendMessage(text, imagePath: imagePath);
+        ref
+            .read(chatControllerProvider)
+            .sendMessage(text, imagePath: imagePath);
         _scrollToBottom();
       });
     } else {
@@ -562,6 +588,7 @@ class _ConversationSettingsSheetState
   late int _topK;
   late double _topP;
   late int _maxTokens;
+  late int _historyRounds;
   bool _loaded = false;
 
   @override
@@ -584,6 +611,7 @@ class _ConversationSettingsSheetState
         _topK = conv.topK;
         _topP = conv.topP;
         _maxTokens = conv.maxTokens;
+        _historyRounds = conv.historyRounds;
         _loaded = true;
       });
     }
@@ -595,12 +623,15 @@ class _ConversationSettingsSheetState
         .getConversation(widget.conversationId);
     if (conv == null) return;
     final updated = conv.copyWith(
-      title: _titleCtrl.text.trim().isNotEmpty ? _titleCtrl.text.trim() : conv.title,
+      title: _titleCtrl.text.trim().isNotEmpty
+          ? _titleCtrl.text.trim()
+          : conv.title,
       systemPrompt: _systemPromptCtrl.text.trim(),
       temperature: _temperature,
       topK: _topK,
       topP: _topP,
       maxTokens: _maxTokens,
+      historyRounds: _historyRounds,
       updatedAt: DateTime.now(),
     );
     await ref.read(conversationsProvider.notifier).updateConversation(updated);
@@ -702,6 +733,23 @@ class _ConversationSettingsSheetState
               onChanged: (v) => setState(() => _maxTokens = v.round()),
             ),
 
+            _buildSliderRow(
+              label: '历史轮数',
+              value: _historyRounds.toDouble(),
+              min: 0,
+              max: 20,
+              divisions: 20,
+              display: _historyRounds == 0 ? '全部' : '$_historyRounds',
+              onChanged: (v) => setState(() => _historyRounds = v.round()),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, top: 2, bottom: 6),
+              child: Text(
+                '用于拼接 history messages；0 表示使用全部历史',
+                style: TextStyle(fontSize: 12, color: colorScheme.outline),
+              ),
+            ),
+
             const SizedBox(height: 8),
 
             // Reset defaults
@@ -709,12 +757,14 @@ class _ConversationSettingsSheetState
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 onPressed: () {
+                  final defaults = ref.read(chatDefaultsProvider);
                   setState(() {
-                    _temperature = AppConstants.defaultTemperature;
-                    _topK = AppConstants.defaultTopK;
-                    _topP = AppConstants.defaultTopP;
-                    _maxTokens = AppConstants.defaultMaxTokens;
-                    _systemPromptCtrl.clear();
+                    _temperature = defaults.temperature;
+                    _topK = defaults.topK;
+                    _topP = defaults.topP;
+                    _maxTokens = defaults.maxTokens;
+                    _historyRounds = defaults.historyRounds;
+                    _systemPromptCtrl.text = defaults.systemPrompt;
                   });
                 },
                 icon: Icon(Icons.restore, size: 18, color: colorScheme.outline),
@@ -768,8 +818,7 @@ class _ConversationSettingsSheetState
           SizedBox(
             width: 48,
             child: Text(display,
-                style: const TextStyle(fontSize: 13),
-                textAlign: TextAlign.end),
+                style: const TextStyle(fontSize: 13), textAlign: TextAlign.end),
           ),
         ],
       ),

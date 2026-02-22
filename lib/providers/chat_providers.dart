@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:shiba/data/models/conversation.dart';
 import 'package:shiba/data/models/message.dart';
 import 'package:shiba/core/constants.dart';
+import 'package:shiba/providers/chat_defaults_provider.dart';
 import 'package:shiba/providers/service_providers.dart';
 import 'package:shiba/providers/model_providers.dart';
 
@@ -29,6 +30,7 @@ class ConversationsNotifier extends AsyncNotifier<List<Conversation>> {
   Future<Conversation> createConversation(
       String modelId, String modelName) async {
     final now = DateTime.now();
+    final defaults = ref.read(chatDefaultsProvider);
     final conversation = Conversation(
       id: _uuid.v4(),
       title: '新对话',
@@ -36,13 +38,20 @@ class ConversationsNotifier extends AsyncNotifier<List<Conversation>> {
       modelName: modelName,
       createdAt: now,
       updatedAt: now,
+      systemPrompt: defaults.systemPrompt,
+      temperature: defaults.temperature,
+      topK: defaults.topK,
+      topP: defaults.topP,
+      maxTokens: defaults.maxTokens,
+      historyRounds: defaults.historyRounds,
     );
     await ref.read(conversationRepoProvider).insertConversation(conversation);
     await refresh();
     return conversation;
   }
 
-  Future<void> updateTitle(String id, String title, {bool updateTime = true}) async {
+  Future<void> updateTitle(String id, String title,
+      {bool updateTime = true}) async {
     final repo = ref.read(conversationRepoProvider);
     final conv = await repo.getConversation(id);
     if (conv != null) {
@@ -77,9 +86,8 @@ final currentConversationProvider = Provider<Conversation?>((ref) {
 });
 
 /// Messages for current conversation
-final messagesProvider =
-    AsyncNotifierProvider<MessagesNotifier, List<Message>>(
-        MessagesNotifier.new);
+final messagesProvider = AsyncNotifierProvider<MessagesNotifier, List<Message>>(
+    MessagesNotifier.new);
 
 class MessagesNotifier extends AsyncNotifier<List<Message>> {
   @override
@@ -95,8 +103,8 @@ class MessagesNotifier extends AsyncNotifier<List<Message>> {
       state = const AsyncData([]);
       return;
     }
-    state = AsyncData(
-        await ref.read(conversationRepoProvider).getMessages(convId));
+    state =
+        AsyncData(await ref.read(conversationRepoProvider).getMessages(convId));
   }
 
   Future<Message> addUserMessage(String content, {String? imagePath}) async {
@@ -137,9 +145,9 @@ class MessagesNotifier extends AsyncNotifier<List<Message>> {
   /// Delete a message and all subsequent messages in the conversation.
   Future<void> deleteMessagesFrom(Message message) async {
     await ref.read(conversationRepoProvider).deleteMessagesFrom(
-      message.conversationId,
-      message.createdAt,
-    );
+          message.conversationId,
+          message.createdAt,
+        );
     await refresh();
   }
 }
@@ -169,9 +177,11 @@ class ChatController {
   Future<void> sendMessage(String content, {String? imagePath}) async {
     final llmService = _ref.read(llmServiceProvider);
     final selectedModel = _ref.read(selectedModelProvider);
+    final trimmedContent = content.trim();
+    final hasImage = imagePath != null && imagePath.isNotEmpty;
 
     if (!llmService.isLoaded || selectedModel == null) return;
-    if (content.trim().isEmpty) return;
+    if (trimmedContent.isEmpty && !hasImage) return;
 
     _ref.read(isGeneratingProvider.notifier).state = true;
     _ref.read(streamingTextProvider.notifier).state = '';
@@ -179,7 +189,9 @@ class ChatController {
     _buffer.clear();
 
     // Add user message
-    await _ref.read(messagesProvider.notifier).addUserMessage(content, imagePath: imagePath);
+    await _ref
+        .read(messagesProvider.notifier)
+        .addUserMessage(trimmedContent, imagePath: imagePath);
 
     // Read conversation-level settings
     final convId = _ref.read(currentConversationIdProvider)!;
@@ -189,16 +201,18 @@ class ChatController {
     // Get all messages for context
     final messages =
         await _ref.read(conversationRepoProvider).getMessages(convId);
+    final historyRounds =
+        conv?.historyRounds ?? AppConstants.defaultHistoryRounds;
+    final scopedMessages = _trimMessagesForHistory(messages, historyRounds);
 
     // Start streaming generation with per-conversation params
     final stream = llmService.generateStream(
-      messages,
+      scopedMessages,
       temperature: conv?.temperature ?? AppConstants.defaultTemperature,
       maxTokens: conv?.maxTokens ?? AppConstants.defaultMaxTokens,
       topP: conv?.topP ?? AppConstants.defaultTopP,
       topK: conv?.topK ?? AppConstants.defaultTopK,
       systemPrompt: conv?.systemPrompt ?? '',
-      imagePath: imagePath,
     );
 
     _subscription = stream.listen(
@@ -213,7 +227,8 @@ class ChatController {
               .read(messagesProvider.notifier)
               .addAssistantMessage(finalText);
           // Auto-generate title from first exchange
-          await _autoGenerateTitle(content, msg);
+          await _autoGenerateTitle(
+              trimmedContent.isNotEmpty ? trimmedContent : '图片提问', msg);
         }
         _ref.read(isGeneratingProvider.notifier).state = false;
         _ref.read(streamingTextProvider.notifier).state = '';
@@ -273,13 +288,39 @@ class ChatController {
     // Save partial response if any content was generated
     final partialText = _buffer.toString();
     if (partialText.isNotEmpty) {
-      _ref.read(messagesProvider.notifier).addAssistantMessage(partialText).then(
-        (_) => _ref.read(messagesProvider.notifier).refresh(),
-      );
+      _ref
+          .read(messagesProvider.notifier)
+          .addAssistantMessage(partialText)
+          .then(
+            (_) => _ref.read(messagesProvider.notifier).refresh(),
+          );
     }
 
     _ref.read(isGeneratingProvider.notifier).state = false;
     _ref.read(streamingTextProvider.notifier).state = '';
     _buffer.clear();
+  }
+
+  List<Message> _trimMessagesForHistory(
+      List<Message> messages, int historyRounds) {
+    if (historyRounds <= 0 || messages.isEmpty) return messages;
+    final maxUserTurns = historyRounds + 1;
+    var userTurnCount = 0;
+    var startIndex = 0;
+    var foundBoundary = false;
+
+    for (var i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role == MessageRole.user) {
+        userTurnCount++;
+        if (userTurnCount == maxUserTurns) {
+          startIndex = i;
+          foundBoundary = true;
+          break;
+        }
+      }
+    }
+
+    if (!foundBoundary) return messages;
+    return messages.sublist(startIndex);
   }
 }
