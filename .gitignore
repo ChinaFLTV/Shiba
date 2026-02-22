@@ -1,4 +1,48 @@
-build
-.dart_tool
-android/.gradle
-.idea
+# Flutter/Dart
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+*.iml
+
+# Generated
+lib/generated_plugin_registrant.dart
+**/GeneratedPluginRegistrant.java
+**/GeneratedPluginRegistrant.h
+**/GeneratedPluginRegistrant.m
+./.flutter-plugins-dependencies
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/
+*.code-workspace
+
+# Android
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/key.properties
+android/app/build/
+android/captures/
+**/*.jks
+**/*.keystore
+
+# iOS
+ios/.symlinks/
+ios/Pods/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/ephemeral/
+ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+
+# macOS
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Flutter/ephemeral/
+
+# OS
+.DS_Store
+Thumbs.db
