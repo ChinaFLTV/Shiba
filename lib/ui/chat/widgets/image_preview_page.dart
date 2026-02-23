@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:shiba/l10n/app_localizations.dart';
 
 class ImagePreviewPage extends StatelessWidget {
   final String imagePath;
@@ -18,7 +19,7 @@ class ImagePreviewPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.save_alt),
-            tooltip: '保存副本',
+            tooltip: S.of(context).saveImageCopy,
             onPressed: () => _saveImage(context),
           ),
         ],
@@ -47,7 +48,7 @@ class ImagePreviewPage extends StatelessWidget {
       if (!await file.exists()) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('图片文件不存在'), behavior: SnackBarBehavior.floating),
+            SnackBar(content: Text(S.of(context).imageNotExist), behavior: SnackBarBehavior.floating),
           );
         }
         return;
@@ -77,8 +78,8 @@ class ImagePreviewPage extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(Platform.isAndroid
-                ? '图片已保存到 Pictures/Shiba'
-                : '图片已保存到 $destName'),
+                ? S.of(context).imageSavedAndroid
+                : S.of(context).imageSavedIos(destName)),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
@@ -87,7 +88,7 @@ class ImagePreviewPage extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e'), behavior: SnackBarBehavior.floating),
+          SnackBar(content: Text(S.of(context).saveFailed('$e')), behavior: SnackBarBehavior.floating),
         );
       }
     }

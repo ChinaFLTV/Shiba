@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/app.dart';
 import 'package:shiba/core/constants.dart';
 import 'package:shiba/core/utils.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/providers/chat_defaults_provider.dart';
 import 'package:shiba/providers/image_settings_provider.dart';
 import 'package:shiba/providers/service_providers.dart';
@@ -16,90 +17,113 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final currentLocale = ref.watch(localeProvider);
+    final l10n = S.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('设置'),
+        title: Text(l10n.settings),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         children: [
-          // Appearance section — single dropdown item
-          const _SectionTitle(title: '外观'),
+          _SectionTitle(title: l10n.appearance),
           Card(
-            child: ListTile(
-              leading: const Icon(Icons.palette_outlined),
-              title: const Text('主题模式'),
-              trailing: DropdownButton<ThemeMode>(
-                value: themeMode,
-                underline: const SizedBox.shrink(),
-                borderRadius: BorderRadius.circular(12),
-                items: const [
-                  DropdownMenuItem(
-                    value: ThemeMode.system,
-                    child: Text('跟随系统'),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.palette_outlined),
+                  title: Text(l10n.themeMode),
+                  trailing: DropdownButton<ThemeMode>(
+                    value: themeMode,
+                    underline: const SizedBox.shrink(),
+                    borderRadius: BorderRadius.circular(12),
+                    items: [
+                      DropdownMenuItem(
+                        value: ThemeMode.system,
+                        child: Text(l10n.themeSystem),
+                      ),
+                      DropdownMenuItem(
+                        value: ThemeMode.light,
+                        child: Text(l10n.themeLight),
+                      ),
+                      DropdownMenuItem(
+                        value: ThemeMode.dark,
+                        child: Text(l10n.themeDark),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        ref.read(themeModeProvider.notifier).setThemeMode(v);
+                      }
+                    },
                   ),
-                  DropdownMenuItem(
-                    value: ThemeMode.light,
-                    child: Text('浅色模式'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.language),
+                  title: Text(l10n.languageSetting),
+                  trailing: DropdownButton<Locale>(
+                    value: currentLocale,
+                    underline: const SizedBox.shrink(),
+                    borderRadius: BorderRadius.circular(12),
+                    items: supportedAppLocales
+                        .map((al) => DropdownMenuItem(
+                              value: al.locale,
+                              child: Text(al.displayName),
+                            ))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        ref.read(localeProvider.notifier).setLocale(v);
+                      }
+                    },
                   ),
-                  DropdownMenuItem(
-                    value: ThemeMode.dark,
-                    child: Text('深色模式'),
-                  ),
-                ],
-                onChanged: (v) {
-                  if (v != null) {
-                    ref.read(themeModeProvider.notifier).setThemeMode(v);
-                  }
-                },
-              ),
+                ),
+              ],
             ),
           ),
 
           const SizedBox(height: 16),
 
-          // TTS section
-          const _SectionTitle(title: '语音合成 (TTS)'),
+          _SectionTitle(title: l10n.ttsSection),
           const _TtsModelCard(),
           const SizedBox(height: 4),
           const _TtsParamsCard(),
 
           const SizedBox(height: 16),
 
-          // Image compression section
-          const _SectionTitle(title: '图片处理'),
+          _SectionTitle(title: l10n.imageSection),
           const _ImageSettingsCard(),
 
           const SizedBox(height: 16),
 
-          const _SectionTitle(title: '对话默认参数'),
+          _SectionTitle(title: l10n.chatDefaultsSection),
           const _ChatDefaultsCard(),
 
           const SizedBox(height: 16),
 
-          // About section — with ink splash on tap/long-press
-          const _SectionTitle(title: '关于'),
+          _SectionTitle(title: l10n.aboutSection),
           Card(
             clipBehavior: Clip.antiAlias,
             child: Column(
-              children: const [
+              children: [
                 _AboutTile(
                   icon: Icons.info_outline,
                   title: AppConstants.appName,
-                  subtitle: '版本 1.0.0',
+                  subtitle: l10n.version('1.0.0'),
                 ),
-                Divider(height: 1),
+                const Divider(height: 1),
                 _AboutTile(
                   icon: Icons.memory,
-                  title: '推理引擎',
+                  title: l10n.inferenceEngine,
                   subtitle: 'llama.cpp (llamadart)',
                 ),
-                Divider(height: 1),
+                const Divider(height: 1),
                 _AboutTile(
                   icon: Icons.cloud_outlined,
-                  title: '模型来源',
-                  subtitle: 'hf-mirror.com (HuggingFace 镜像)',
+                  title: l10n.modelSource,
+                  subtitle: l10n.modelSourceValue,
                 ),
               ],
             ),
@@ -109,7 +133,7 @@ class SettingsPage extends ConsumerWidget {
 
           Center(
             child: Text(
-              'Shiba · 所有推理均在设备上完成',
+              l10n.allInferenceOnDevice,
               style: TextStyle(
                   fontSize: 12, color: Theme.of(context).colorScheme.outline),
             ),
@@ -194,10 +218,10 @@ class _ChatDefaultsCardState extends ConsumerState<_ChatDefaultsCard> {
     if (mounted) {
       setState(() => _dirty = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('全局默认对话参数已保存'),
+        SnackBar(
+          content: Text(S.of(context).defaultsSaved),
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 1),
+          duration: const Duration(seconds: 1),
         ),
       );
     }
@@ -236,6 +260,7 @@ class _ChatDefaultsCardState extends ConsumerState<_ChatDefaultsCard> {
     }
 
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = S.of(context);
 
     return Card(
       child: Padding(
@@ -247,10 +272,10 @@ class _ChatDefaultsCardState extends ConsumerState<_ChatDefaultsCard> {
               controller: _systemPromptCtrl,
               maxLines: 3,
               maxLength: 500,
-              decoration: const InputDecoration(
-                labelText: '默认系统提示词',
-                hintText: '新对话默认使用；可在对话设置中覆盖',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.defaultSystemPrompt,
+                hintText: l10n.defaultSystemPromptHint,
+                border: const OutlineInputBorder(),
               ),
               onChanged: (_) {
                 if (!_dirty) setState(() => _dirty = true);
@@ -294,7 +319,7 @@ class _ChatDefaultsCardState extends ConsumerState<_ChatDefaultsCard> {
               }),
             ),
             _ParamSliderRow(
-              label: '最大生成长度',
+              label: l10n.maxGenerationLength,
               value: _maxTokens.toDouble(),
               min: 64,
               max: 4096,
@@ -306,12 +331,12 @@ class _ChatDefaultsCardState extends ConsumerState<_ChatDefaultsCard> {
               }),
             ),
             _ParamSliderRow(
-              label: '历史轮数',
+              label: l10n.historyRounds,
               value: _historyRounds.toDouble(),
               min: 0,
               max: 20,
               divisions: 20,
-              display: _historyRounds == 0 ? '全部' : '$_historyRounds',
+              display: _historyRounds == 0 ? l10n.historyRoundsAll : '$_historyRounds',
               onChanged: (v) => setState(() {
                 _dirty = true;
                 _historyRounds = v.round();
@@ -320,7 +345,7 @@ class _ChatDefaultsCardState extends ConsumerState<_ChatDefaultsCard> {
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 2, bottom: 8),
               child: Text(
-                '新建对话默认 history messages 使用该轮数；0 表示全部历史',
+                l10n.historyRoundsHint,
                 style: TextStyle(fontSize: 12, color: colorScheme.outline),
               ),
             ),
@@ -331,14 +356,14 @@ class _ChatDefaultsCardState extends ConsumerState<_ChatDefaultsCard> {
                   icon:
                       Icon(Icons.restore, size: 18, color: colorScheme.outline),
                   label: Text(
-                    '恢复默认',
+                    l10n.restoreDefaults,
                     style: TextStyle(fontSize: 13, color: colorScheme.outline),
                   ),
                 ),
                 const Spacer(),
                 FilledButton(
                   onPressed: _dirty ? _save : null,
-                  child: const Text('保存'),
+                  child: Text(l10n.save),
                 ),
               ],
             ),
@@ -401,7 +426,6 @@ class _ParamSliderRow extends StatelessWidget {
   }
 }
 
-/// About section tile with ink splash feedback on tap/long-press
 class _AboutTile extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -417,7 +441,6 @@ class _AboutTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        // Light haptic feedback for a polished feel
         HapticFeedback.lightImpact();
       },
       onLongPress: () {
@@ -425,7 +448,7 @@ class _AboutTile extends StatelessWidget {
         Clipboard.setData(ClipboardData(text: '$title: $subtitle'));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已复制: $subtitle'),
+            content: Text(S.of(context).copied(subtitle)),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 1),
           ),
@@ -474,18 +497,19 @@ class _TtsModelCardState extends ConsumerState<_TtsModelCard> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = S.of(context);
 
     return Card(
       child: Column(
         children: [
           ListTile(
             leading: const Icon(Icons.record_voice_over_outlined),
-            title: const Text('MeloTTS 中英文语音模型'),
+            title: Text(l10n.ttsModelTitle),
             subtitle: _loading
-                ? const Text('检查中...')
+                ? Text(l10n.ttsChecking)
                 : _isReady
-                    ? Text('已下载 · ${formatBytes(_modelSize)}')
-                    : const Text('未下载 · 约182MB'),
+                    ? Text(l10n.ttsDownloaded(formatBytes(_modelSize)))
+                    : Text(l10n.ttsNotDownloaded),
             trailing: _loading
                 ? const SizedBox(
                     width: 20,
@@ -496,12 +520,12 @@ class _TtsModelCardState extends ConsumerState<_TtsModelCard> {
                     ? IconButton(
                         icon: Icon(Icons.delete_outline,
                             color: colorScheme.error),
-                        tooltip: '删除语音模型',
+                        tooltip: l10n.ttsDeleteTitle,
                         onPressed: () => _confirmDelete(context),
                       )
                     : FilledButton.tonal(
                         onPressed: () => _startDownload(context),
-                        child: const Text('下载'),
+                        child: Text(l10n.download),
                       ),
           ),
         ],
@@ -525,19 +549,20 @@ class _TtsModelCardState extends ConsumerState<_TtsModelCard> {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final l10n = S.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除语音模型'),
-        content: const Text('确定要删除已下载的TTS语音模型吗？\n删除后朗读功能将不可用，需要重新下载。'),
+        title: Text(l10n.ttsDeleteTitle),
+        content: Text(l10n.ttsDeleteContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -558,6 +583,7 @@ class _TtsParamsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(ttsSettingsProvider);
+    final l10n = S.of(context);
 
     return Card(
       child: Padding(
@@ -566,7 +592,7 @@ class _TtsParamsCard extends ConsumerWidget {
           children: [
             const Icon(Icons.speed_outlined, size: 20),
             const SizedBox(width: 8),
-            const Text('语速'),
+            Text(l10n.ttsSpeed),
             Expanded(
               child: Slider(
                 value: settings.speed,
@@ -603,6 +629,7 @@ class _ImageSettingsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(imageSettingsProvider);
     final notifier = ref.read(imageSettingsProvider.notifier);
+    final l10n = S.of(context);
 
     return Card(
       child: Padding(
@@ -613,7 +640,7 @@ class _ImageSettingsCard extends ConsumerWidget {
               children: [
                 const Icon(Icons.photo_size_select_large_outlined, size: 20),
                 const SizedBox(width: 8),
-                const Expanded(child: Text('压缩图片')),
+                Expanded(child: Text(l10n.compressImage)),
                 Switch(
                   value: settings.compressEnabled,
                   onChanged: (v) => notifier.setCompressEnabled(v),
@@ -625,7 +652,7 @@ class _ImageSettingsCard extends ConsumerWidget {
               Row(
                 children: [
                   const SizedBox(width: 28),
-                  const Text('最大分辨率', style: TextStyle(fontSize: 13)),
+                  Text(l10n.maxResolution, style: const TextStyle(fontSize: 13)),
                   Expanded(
                     child: Slider(
                       value: settings.maxResolution.toDouble(),
@@ -647,7 +674,7 @@ class _ImageSettingsCard extends ConsumerWidget {
               Row(
                 children: [
                   const SizedBox(width: 28),
-                  const Text('图片质量', style: TextStyle(fontSize: 13)),
+                  Text(l10n.imageQuality, style: const TextStyle(fontSize: 13)),
                   Expanded(
                     child: Slider(
                       value: settings.quality.toDouble(),

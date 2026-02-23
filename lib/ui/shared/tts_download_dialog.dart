@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shiba/core/utils.dart';
 import 'package:shiba/data/services/tts_service.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 
 /// Reusable dialog for downloading TTS model with progress, speed, and cancel.
 class TtsDownloadDialog extends StatefulWidget {
@@ -91,7 +92,7 @@ class _TtsDownloadDialogState extends State<TtsDownloadDialog> {
         setState(() {
           _downloading = false;
           if (!cancelToken.isCancelled) {
-            _error = '下载失败，请检查网络后重试';
+            _error = S.of(context).ttsDownloadFailed;
           }
         });
         if (cancelToken.isCancelled && mounted) {
@@ -110,9 +111,10 @@ class _TtsDownloadDialogState extends State<TtsDownloadDialog> {
     final fraction = _total > 0 ? _received / _total : 0.0;
     final mbReceived = (_received / (1024 * 1024)).toStringAsFixed(1);
     final mbTotal = (_total / (1024 * 1024)).toStringAsFixed(0);
+    final l10n = S.of(context);
 
     return AlertDialog(
-      title: Text(_done ? '下载完成' : '下载语音模型'),
+      title: Text(_done ? l10n.downloadComplete : l10n.downloadModel),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -132,18 +134,18 @@ class _TtsDownloadDialogState extends State<TtsDownloadDialog> {
               ],
             ),
             const SizedBox(height: 4),
-            Text('速度过慢时会自动切换下载源',
+            Text(l10n.ttsAutoSwitch,
                 style: TextStyle(
                     fontSize: 11,
                     color: Theme.of(context).colorScheme.outline)),
           ],
           if (_done)
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 8),
-                Text('语音模型下载完成'),
+                const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 8),
+                Text(l10n.ttsDownloadComplete),
               ],
             ),
           if (_error != null) ...[
@@ -151,7 +153,7 @@ class _TtsDownloadDialogState extends State<TtsDownloadDialog> {
             const SizedBox(height: 8),
             FilledButton(
               onPressed: _startDownload,
-              child: const Text('重试'),
+              child: Text(l10n.retry),
             ),
           ],
         ],
@@ -160,12 +162,12 @@ class _TtsDownloadDialogState extends State<TtsDownloadDialog> {
         if (_downloading)
           TextButton(
             onPressed: _cancelDownload,
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
         if (_error != null)
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+            child: Text(l10n.close),
           ),
       ],
     );

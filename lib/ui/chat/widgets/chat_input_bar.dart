@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 
 class ChatInputBar extends StatefulWidget {
   final bool enabled;
@@ -161,7 +162,7 @@ class ChatInputBarState extends State<ChatInputBar> {
                       : null,
                   icon: Icon(Icons.image_outlined,
                       size: 22, color: hasImage ? colorScheme.primary : null),
-                  tooltip: '选择图片',
+                  tooltip: S.of(context).selectImage,
                 ),
               Expanded(
                 child: ConstrainedBox(
@@ -173,7 +174,7 @@ class ChatInputBarState extends State<ChatInputBar> {
                     maxLines: null,
                     textInputAction: TextInputAction.newline,
                     decoration: InputDecoration(
-                      hintText: widget.enabled ? '输入消息...' : '模型加载中...',
+                      hintText: widget.enabled ? S.of(context).inputMessage : S.of(context).modelLoading,
                       hintStyle: TextStyle(
                           color: colorScheme.outline.withValues(alpha: 0.5)),
                     ),

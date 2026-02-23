@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/ui/chat/chat_list_page.dart';
 import 'package:shiba/ui/models/models_page.dart';
 import 'package:shiba/ui/settings/settings_page.dart';
@@ -29,21 +30,21 @@ class HomePage extends ConsumerWidget {
         onDestinationSelected: (index) {
           ref.read(homeTabProvider.notifier).state = index;
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.chat_outlined),
-            selectedIcon: Icon(Icons.chat),
-            label: '对话',
+            icon: const Icon(Icons.chat_outlined),
+            selectedIcon: const Icon(Icons.chat),
+            label: S.of(context).tabChat,
           ),
           NavigationDestination(
-            icon: Icon(Icons.model_training_outlined),
-            selectedIcon: Icon(Icons.model_training),
-            label: '模型',
+            icon: const Icon(Icons.model_training_outlined),
+            selectedIcon: const Icon(Icons.model_training),
+            label: S.of(context).tabModels,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: '设置',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: S.of(context).tabSettings,
           ),
         ],
       ),

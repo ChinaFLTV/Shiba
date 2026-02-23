@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:shiba/data/models/message.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/ui/chat/widgets/image_preview_page.dart';
 
 class MessageBubble extends StatelessWidget {
@@ -161,15 +162,15 @@ class MessageBubble extends StatelessWidget {
                       children: [
                         _ActionBtn(
                           icon: Icons.copy_outlined,
-                          tooltip: '复制',
+                          tooltip: S.of(context).copyAction,
                           onTap: () {
                             Clipboard.setData(
                                 ClipboardData(text: message.content));
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('已复制到剪贴板'),
+                              SnackBar(
+                                content: Text(S.of(context).copiedToClipboard),
                                 behavior: SnackBarBehavior.floating,
-                                duration: Duration(seconds: 1),
+                                duration: const Duration(seconds: 1),
                               ),
                             );
                           },
@@ -177,26 +178,25 @@ class MessageBubble extends StatelessWidget {
                         if (isUser && onEdit != null)
                           _ActionBtn(
                             icon: Icons.edit_outlined,
-                            tooltip: '编辑并重发',
+                            tooltip: S.of(context).editAndResend,
                             onTap: onEdit!,
                           ),
                         if (onDelete != null)
                           _ActionBtn(
                             icon: Icons.delete_outline,
-                            tooltip: '删除',
+                            tooltip: S.of(context).deleteAction,
                             onTap: onDelete!,
                           ),
-                        // TTS read-aloud button (for assistant messages)
                         if (!isUser)
                           isTtsPlaying
                               ? _ActionBtn(
                                   icon: Icons.stop_circle_outlined,
-                                  tooltip: '停止朗读',
+                                  tooltip: S.of(context).stopReading,
                                   onTap: onTtsStop ?? () {},
                                 )
                               : _ActionBtn(
                                   icon: Icons.volume_up_outlined,
-                                  tooltip: '朗读',
+                                  tooltip: S.of(context).readAloud,
                                   onTap: onTtsPlay ?? () {},
                                 ),
                       ],

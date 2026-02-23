@@ -66,4 +66,5 @@ flutter_launcher_icons:
   adaptive_icon_foreground: "assets/icon/app_icon.png"
 
 flutter:
+  generate: true
   uses-material-design: true

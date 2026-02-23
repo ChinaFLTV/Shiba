@@ -3,7 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<string>zh</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>en</string>
+		<string>fr</string>
+		<string>de</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Shiba</string>
 	<key>CFBundleExecutable</key>

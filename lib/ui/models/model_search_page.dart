@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/data/models/hf_model.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/providers/model_providers.dart';
 import 'package:shiba/ui/models/model_files_page.dart';
 
@@ -32,7 +33,7 @@ class _ModelSearchPageState extends ConsumerState<ModelSearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('搜索模型'),
+        title: Text(S.of(context).searchModels),
       ),
       body: Column(
         children: [
@@ -45,7 +46,7 @@ class _ModelSearchPageState extends ConsumerState<ModelSearchPage> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: '搜索 GGUF 模型 (如: llama, qwen, phi)',
+                      hintText: S.of(context).searchGgufModels,
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
@@ -64,7 +65,7 @@ class _ModelSearchPageState extends ConsumerState<ModelSearchPage> {
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: _performSearch,
-                  child: const Text('搜索'),
+                  child: Text(S.of(context).search),
                 ),
               ],
             ),
@@ -101,7 +102,7 @@ class _ModelSearchPageState extends ConsumerState<ModelSearchPage> {
             Icon(Icons.travel_explore,
                 size: 64, color: colorScheme.primary.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
-            Text('从 HuggingFace 镜像搜索 GGUF 模型',
+            Text(S.of(context).searchFromHf,
                 style: TextStyle(color: colorScheme.outline)),
             const SizedBox(height: 24),
             Wrap(
@@ -135,18 +136,18 @@ class _ModelSearchPageState extends ConsumerState<ModelSearchPage> {
           children: [
             const Icon(Icons.error_outline, size: 48),
             const SizedBox(height: 8),
-            Text('搜索失败: $e', textAlign: TextAlign.center),
+            Text(S.of(context).searchFailed('$e'), textAlign: TextAlign.center),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => ref.invalidate(hfSearchResultsProvider(_query)),
-              child: const Text('重试'),
+              child: Text(S.of(context).retry),
             ),
           ],
         ),
       ),
       data: (models) {
         if (models.isEmpty) {
-          return const Center(child: Text('没有找到相关模型'));
+          return Center(child: Text(S.of(context).noModelsFound));
         }
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -231,7 +232,7 @@ class _HfModelTile extends StatelessWidget {
                     ),
                   _SearchChip(
                     icon: Icons.download,
-                    label: '${model.downloadsFormatted} 下载',
+                    label: S.of(context).downloadsCount(model.downloadsFormatted),
                     color: colorScheme.surfaceContainerHighest,
                     textColor: colorScheme.onSurface,
                   ),

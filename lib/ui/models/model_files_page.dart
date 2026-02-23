@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:shiba/data/models/hf_model.dart';
 import 'package:shiba/data/models/local_model.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/providers/model_providers.dart';
 import 'package:shiba/providers/service_providers.dart';
 
@@ -33,17 +34,17 @@ class ModelFilesPage extends ConsumerWidget {
           // GGUF files list
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text('GGUF 文件',
+            child: Text(S.of(context).ggufFiles,
                 style: Theme.of(context).textTheme.titleSmall),
           ),
           Expanded(
             child: filesAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('加载失败: $e')),
+              error: (e, _) => Center(child: Text(S.of(context).loadFailed('$e'))),
               data: (files) {
                 if (files.isEmpty) {
-                  return const Center(child: Text('该仓库没有 GGUF 文件'));
+                  return Center(child: Text(S.of(context).noGgufFiles));
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -102,13 +103,13 @@ class _ModelHeader extends StatelessWidget {
                 ),
               _HeaderChip(
                 icon: Icons.download,
-                label: '${model.downloadsFormatted} 下载',
+                label: S.of(context).downloadsCount(model.downloadsFormatted),
                 color: colorScheme.surfaceContainerHighest,
                 textColor: colorScheme.onSurface,
               ),
               _HeaderChip(
                 icon: Icons.favorite,
-                label: '${model.likes} 喜欢',
+                label: S.of(context).likesCount('${model.likes}'),
                 color: colorScheme.surfaceContainerHighest,
                 textColor: colorScheme.onSurface,
               ),
@@ -169,7 +170,7 @@ class _ModelHeader extends StatelessWidget {
                     color: colorScheme.onTertiaryContainer),
                 const SizedBox(width: 4),
                 Text(
-                  '可用内存: ~${formatBytes(memoryLimit)}',
+                  S.of(context).availableMemory(formatBytes(memoryLimit)),
                   style: TextStyle(
                       fontSize: 12, color: colorScheme.onTertiaryContainer),
                 ),
@@ -282,7 +283,7 @@ class _FileTile extends ConsumerWidget {
                 if (suitability != _Suitability.tooLarge)
                   FilledButton.tonal(
                     onPressed: () => _startDownload(context, ref),
-                    child: const Text('下载'),
+                    child: Text(S.of(context).download),
                   ),
               ],
             ),
@@ -336,27 +337,28 @@ class _FileTile extends ConsumerWidget {
 
   Widget _buildSuitabilityChip(BuildContext context, _Suitability suitability) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = S.of(context);
     final (label, icon, bgColor, fgColor) = switch (suitability) {
       _Suitability.recommended => (
-        '推荐',
+        l10n.suitabilityRecommended,
         Icons.thumb_up_outlined,
         colorScheme.primaryContainer,
         colorScheme.onPrimaryContainer,
       ),
       _Suitability.ok => (
-        '可用',
+        l10n.suitabilityOk,
         Icons.check_circle_outline,
         colorScheme.secondaryContainer,
         colorScheme.onSecondaryContainer,
       ),
       _Suitability.risky => (
-        '勉强',
+        l10n.suitabilityRisky,
         Icons.warning_amber,
         colorScheme.tertiaryContainer,
         colorScheme.onTertiaryContainer,
       ),
       _Suitability.tooLarge => (
-        '超出内存',
+        l10n.suitabilityTooLarge,
         Icons.block,
         colorScheme.errorContainer,
         colorScheme.onErrorContainer,
@@ -382,7 +384,7 @@ class _FileTile extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${targetFile.filename} 已在下载列表中'),
+            content: Text(S.of(context).alreadyInList(targetFile.filename)),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -474,8 +476,8 @@ class _FileTile extends ConsumerWidget {
 
     if (context.mounted) {
       final msg = mmprojQueued
-          ? '开始下载 ${file.filename}（已自动附带视觉投影器）'
-          : '开始下载 ${file.filename}';
+          ? S.of(context).startDownloadWithVision(file.filename)
+          : S.of(context).startDownload(file.filename);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
       );

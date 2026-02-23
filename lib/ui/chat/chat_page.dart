@@ -14,6 +14,7 @@ import 'package:shiba/providers/image_settings_provider.dart';
 import 'package:shiba/providers/model_providers.dart';
 import 'package:shiba/providers/service_providers.dart';
 import 'package:shiba/providers/tts_providers.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/ui/chat/widgets/chat_input_bar.dart';
 import 'package:shiba/ui/chat/widgets/message_bubble.dart';
 import 'package:shiba/ui/shared/tts_download_dialog.dart';
@@ -79,7 +80,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
     if (llmService.isLoaded) return;
     if (selectedModel == null) {
-      setState(() => _loadError = '未选择模型');
+      setState(() => _loadError = S.of(context).noModelSelected);
       return;
     }
 
@@ -94,7 +95,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted) {
         setState(() {
           _modelLoading = false;
-          _loadError = '模型文件不存在，请重新下载\n路径: ${selectedModel.filePath}';
+          _loadError = S.of(context).modelFileNotExist(selectedModel.filePath);
         });
       }
       return;
@@ -156,7 +157,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(lastError ?? '视觉投影器加载失败，请检查 mmproj 是否与当前模型匹配'),
+            content: Text(lastError ?? S.of(context).visionProjectorFailed),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 6),
           ),
@@ -169,10 +170,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     // Show hint if model looks multimodal but mmproj is missing
     if (_looksMultimodal(repoId) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('该模型支持图片输入，但缺少视觉投影器(mmproj)文件，请在模型仓库中下载对应的 mmproj 文件'),
+        SnackBar(
+          content: Text(S.of(context).visionProjectorMissing),
           behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 6),
+          duration: const Duration(seconds: 6),
         ),
       );
     }
@@ -290,12 +291,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 8),
             action: SnackBarAction(
-              label: '详情',
+              label: S.of(context).details,
               onPressed: () {
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('推理错误'),
+                    title: Text(S.of(context).inferenceError),
                     content: SingleChildScrollView(
                       child: SelectableText(error,
                           style: const TextStyle(
@@ -304,7 +305,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: const Text('关闭'),
+                        child: Text(S.of(context).close),
                       ),
                     ],
                   ),
@@ -323,15 +324,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 icon: const Icon(Icons.close),
                 onPressed: _exitSelectionMode,
               ),
-              title: Text('已选 ${_selectedMessageIds.length} 条'),
+              title: Text(S.of(context).selectedCount(_selectedMessageIds.length)),
               actions: [
                 TextButton(
                   onPressed: () => _selectAllMessages(messagesAsync),
-                  child: const Text('全选'),
+                  child: Text(S.of(context).selectAll),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  tooltip: '删除所选',
+                  tooltip: S.of(context).deleteSelected,
                   onPressed: _selectedMessageIds.isEmpty
                       ? null
                       : _confirmDeleteSelected,
@@ -353,7 +354,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               actions: [
                 IconButton(
                   icon: const Icon(Icons.tune, size: 22),
-                  tooltip: '对话设置',
+                  tooltip: S.of(context).conversationSettings,
                   onPressed: () => _showConversationSettings(context),
                 ),
                 if (_modelLoading)
@@ -374,12 +375,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             MaterialBanner(
               content: GestureDetector(
                 onLongPress: () {
-                  // Long press to copy full error for sharing
                   final data = ClipboardData(text: _loadError!);
                   Clipboard.setData(data);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('错误信息已复制到剪贴板'),
+                    SnackBar(
+                      content: Text(S.of(context).errorCopied),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
@@ -393,14 +393,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
               actions: [
                 TextButton(
                   onPressed: _ensureModelLoaded,
-                  child: const Text('重试'),
+                  child: Text(S.of(context).retry),
                 ),
                 TextButton(
                   onPressed: () {
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('错误详情'),
+                        title: Text(S.of(context).errorDetails),
                         content: SingleChildScrollView(
                           child: SelectableText(
                             _loadError!,
@@ -415,23 +415,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                   ClipboardData(text: _loadError!));
                               Navigator.pop(ctx);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('已复制'),
+                                SnackBar(
+                                  content: Text(S.of(context).copiedToClipboard),
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
                             },
-                            child: const Text('复制'),
+                            child: Text(S.of(context).copy),
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(ctx),
-                            child: const Text('关闭'),
+                            child: Text(S.of(context).close),
                           ),
                         ],
                       ),
                     );
                   },
-                  child: const Text('详情'),
+                  child: Text(S.of(context).details),
                 ),
               ],
             ),
@@ -552,18 +552,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       final shouldDownload = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('下载语音模型'),
-          content: const Text(
-            'TTS语音模型尚未下载（约182MB）。\n是否现在下载？',
-          ),
+          title: Text(S.of(context).ttsDownloadTitle),
+          content: Text(S.of(context).ttsDownloadPrompt),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
+              child: Text(S.of(context).cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('下载'),
+              child: Text(S.of(context).download),
             ),
           ],
         ),
@@ -588,8 +586,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (!ok && mounted) {
       _ttsPlayingIdNotifier.state = null;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('朗读失败，请重试'),
+        SnackBar(
+          content: Text(S.of(context).ttsSpeakFailed),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -692,23 +690,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除消息'),
+        title: Text(S.of(context).deleteMessage),
         content: Text(
           message.content.length > 50
-              ? '确定删除这条消息？\n\n"${message.content.substring(0, 50)}..."'
-              : '确定删除这条消息？\n\n"${message.content}"',
+              ? S.of(context).deleteMessageConfirm('${message.content.substring(0, 50)}...')
+              : S.of(context).deleteMessageConfirm(message.content),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(S.of(context).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            child: const Text('删除'),
+            child: Text(S.of(context).delete),
           ),
         ],
       ),
@@ -724,19 +722,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('批量删除'),
-        content: Text('确定删除选中的 $count 条消息？此操作不可撤销。'),
+        title: Text(S.of(context).batchDelete),
+        content: Text(S.of(context).batchDeleteConfirm(count)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text(S.of(context).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            child: const Text('删除'),
+            child: Text(S.of(context).delete),
           ),
         ],
       ),
@@ -750,7 +748,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   String _buildLoadErrorMessage(String? error, String filePath) {
-    if (error == null) return '模型加载失败（未知错误）';
+    if (error == null) return S.of(context).modelLoadFailedUnknown;
 
     // These are pre-flight check errors with clear messages — show as-is
     if (error.contains('非GGUF') ||
@@ -762,9 +760,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       return error;
     }
 
-    // Multi-stage diagnostics from LlmService — show full detail
-    // The error already contains structured stage-by-stage info
-    return '模型加载失败\n\n$error';
+    return '${S.of(context).modelLoadFailed}\n\n$error';
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -778,13 +774,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             Icon(Icons.smart_toy_outlined,
                 size: 64, color: colorScheme.primary.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
-            Text('开始对话',
+            Text(S.of(context).startConversation,
                 style: Theme.of(context)
                     .textTheme
                     .headlineSmall
                     ?.copyWith(color: colorScheme.primary)),
             const SizedBox(height: 8),
-            Text('输入你的问题，与Shiba对话',
+            Text(S.of(context).chatWithShiba,
                 style: TextStyle(color: colorScheme.outline)),
           ],
         ),
@@ -884,16 +880,16 @@ class _ConversationSettingsSheetState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('对话设置', style: Theme.of(context).textTheme.titleLarge),
+            Text(S.of(context).conversationSettingsTitle, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
 
             // Title
             TextField(
               controller: _titleCtrl,
               maxLength: 30,
-              decoration: const InputDecoration(
-                labelText: '对话标题',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: S.of(context).conversationTitle,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -903,10 +899,10 @@ class _ConversationSettingsSheetState
               controller: _systemPromptCtrl,
               maxLines: 3,
               maxLength: 500,
-              decoration: const InputDecoration(
-                labelText: '系统提示词',
-                hintText: '例如：你是一个专业的翻译助手',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: S.of(context).systemPrompt,
+                hintText: S.of(context).systemPromptHint,
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
@@ -946,7 +942,7 @@ class _ConversationSettingsSheetState
 
             // Max Tokens
             _buildSliderRow(
-              label: '最大生成长度',
+              label: S.of(context).maxGenerationLength,
               value: _maxTokens.toDouble(),
               min: 64,
               max: 4096,
@@ -956,18 +952,18 @@ class _ConversationSettingsSheetState
             ),
 
             _buildSliderRow(
-              label: '历史轮数',
+              label: S.of(context).historyRounds,
               value: _historyRounds.toDouble(),
               min: 0,
               max: 20,
               divisions: 20,
-              display: _historyRounds == 0 ? '全部' : '$_historyRounds',
+              display: _historyRounds == 0 ? S.of(context).historyRoundsAll : '$_historyRounds',
               onChanged: (v) => setState(() => _historyRounds = v.round()),
             ),
             Padding(
               padding: const EdgeInsets.only(left: 4, top: 2, bottom: 6),
               child: Text(
-                '用于拼接 history messages；0 表示使用全部历史',
+                S.of(context).historyRoundsDescription,
                 style: TextStyle(fontSize: 12, color: colorScheme.outline),
               ),
             ),
@@ -990,7 +986,7 @@ class _ConversationSettingsSheetState
                   });
                 },
                 icon: Icon(Icons.restore, size: 18, color: colorScheme.outline),
-                label: Text('恢复默认',
+                label: Text(S.of(context).restoreDefaults,
                     style: TextStyle(fontSize: 13, color: colorScheme.outline)),
               ),
             ),
@@ -1002,7 +998,7 @@ class _ConversationSettingsSheetState
               width: double.infinity,
               child: FilledButton(
                 onPressed: _save,
-                child: const Text('保存'),
+                child: Text(S.of(context).save),
               ),
             ),
           ],

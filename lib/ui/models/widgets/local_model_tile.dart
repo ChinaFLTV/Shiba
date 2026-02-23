@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/data/models/local_model.dart';
 import 'package:shiba/core/utils.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/providers/model_providers.dart';
 import 'package:shiba/providers/service_providers.dart';
 
@@ -23,6 +24,7 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final dp = ref.watch(downloadProgressProvider(model.id));
+    _cachedL10n = S.of(context);
 
     final ModelStatus effectiveStatus;
     if (dp.isActive) {
@@ -158,14 +160,14 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
                       const SizedBox(width: 12),
                       Icon(Icons.timer_outlined, size: 12, color: colorScheme.outline),
                       const SizedBox(width: 4),
-                      Text('剩余 ${dp.etaFormatted}',
+                      Text(_cachedL10n.remaining(dp.etaFormatted),
                           style: TextStyle(fontSize: 11, color: colorScheme.outline)),
                     ],
                   ),
                 ],
                 if (effectiveStatus == ModelStatus.paused) ...[
                   const SizedBox(height: 2),
-                  Text('已暂停',
+                  Text(_cachedL10n.paused,
                       style: TextStyle(
                           fontSize: 11,
                           color: colorScheme.outline,
@@ -176,18 +178,18 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
               // Expanded detail section (completed models only)
               if (_expanded && effectiveStatus == ModelStatus.completed) ...[
                 const Divider(height: 16),
-                _DetailRow(label: '仓库', value: model.repoId),
-                _DetailRow(label: '文件名', value: model.filename),
+                _DetailRow(label: _cachedL10n.detailRepo, value: model.repoId),
+                _DetailRow(label: _cachedL10n.detailFilename, value: model.filename),
                 _DetailRow(
-                  label: '路径',
+                  label: _cachedL10n.detailPath,
                   value: model.filePath,
                   copiable: true,
                   maxLines: null,
                 ),
-                _DetailRow(label: '文件大小', value: model.fileSizeFormatted),
+                _DetailRow(label: _cachedL10n.detailFileSize, value: model.fileSizeFormatted),
                 if (model.quantization.isNotEmpty)
-                  _DetailRow(label: '量化类型', value: model.quantization),
-                _DetailRow(label: '下载时间', value: model.createdAtFormatted),
+                  _DetailRow(label: _cachedL10n.detailQuantType, value: model.quantization),
+                _DetailRow(label: _cachedL10n.detailDownloadTime, value: model.createdAtFormatted),
               ],
             ],
           ),
@@ -213,19 +215,22 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
   }
 
   String _statusLabel(ModelStatus status) {
+    // Note: context is available in build() where this is called
     switch (status) {
       case ModelStatus.completed:
-        return '已完成';
+        return _cachedL10n.statusCompleted;
       case ModelStatus.downloading:
-        return '下载中';
+        return _cachedL10n.statusDownloading;
       case ModelStatus.pending:
-        return '等待中';
+        return _cachedL10n.statusPending;
       case ModelStatus.paused:
-        return '已暂停';
+        return _cachedL10n.statusPaused;
       case ModelStatus.failed:
-        return '失败';
+        return _cachedL10n.statusFailed;
     }
   }
+
+  late S _cachedL10n;
 
   Color _statusBgColor(ColorScheme cs, ModelStatus status) {
     switch (status) {
@@ -281,7 +286,7 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
                   );
                   ref.read(localModelsProvider.notifier).refresh();
                 },
-                tooltip: '暂停',
+                tooltip: _cachedL10n.pauseAction,
               ),
             ),
             SizedBox(
@@ -292,7 +297,7 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
                     size: 20, color: Theme.of(context).colorScheme.error),
                 padding: EdgeInsets.zero,
                 onPressed: () => _confirmCancel(context, ref),
-                tooltip: '取消下载',
+                tooltip: _cachedL10n.cancelDownload,
               ),
             ),
           ],
@@ -304,12 +309,12 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
             IconButton(
               icon: const Icon(Icons.play_arrow, size: 20),
               onPressed: () => _resumeDownload(context, ref),
-              tooltip: '继续下载',
+              tooltip: _cachedL10n.resumeDownload,
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 20),
               onPressed: () => _confirmDelete(context, ref),
-              tooltip: '删除',
+              tooltip: _cachedL10n.delete,
             ),
           ],
         );
@@ -320,12 +325,12 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
             IconButton(
               icon: const Icon(Icons.refresh, size: 20),
               onPressed: () => _resumeDownload(context, ref),
-              tooltip: '重试',
+              tooltip: _cachedL10n.retry,
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 20),
               onPressed: () => _confirmDelete(context, ref),
-              tooltip: '删除',
+              tooltip: _cachedL10n.delete,
             ),
           ],
         );
@@ -341,7 +346,7 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
             IconButton(
               icon: const Icon(Icons.delete_outline, size: 20),
               onPressed: () => _confirmDelete(context, ref),
-              tooltip: '删除',
+              tooltip: _cachedL10n.delete,
             ),
           ],
         );
@@ -391,20 +396,21 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final l10n = S.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('取消下载'),
-        content: Text('确定要取消下载 ${model.displayName} 吗？\n已下载的文件将被删除。'),
+        title: Text(l10n.cancelDownloadTitle),
+        content: Text(l10n.cancelDownloadContent(model.displayName)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('继续下载')),
+              child: Text(l10n.continueDownload)),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.error),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('取消下载')),
+              child: Text(l10n.cancelDownload)),
         ],
       ),
     );
@@ -416,19 +422,19 @@ class _LocalModelTileState extends ConsumerState<LocalModelTile> {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = S.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除模型'),
-        content: Text(
-            '确定要删除 ${model.displayName} 吗？\n这将释放 ${model.fileSizeFormatted} 的存储空间。'),
+        title: Text(l10n.deleteModel),
+        content: Text(l10n.deleteModelContent(model.displayName, model.fileSizeFormatted)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child: Text(l10n.cancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('删除')),
+              child: Text(l10n.delete)),
         ],
       ),
     );
@@ -529,10 +535,10 @@ class _DetailRow extends StatelessWidget {
               onTap: () {
                 Clipboard.setData(ClipboardData(text: value));
                 ScaffoldMessenger.of(outerContext).showSnackBar(
-                  const SnackBar(
-                    content: Text('已复制到剪贴板'),
+                  SnackBar(
+                    content: Text(S.of(outerContext).copiedToClipboard),
                     behavior: SnackBarBehavior.floating,
-                    duration: Duration(seconds: 1),
+                    duration: const Duration(seconds: 1),
                   ),
                 );
               },

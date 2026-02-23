@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/core/theme/app_theme.dart';
 import 'package:shiba/data/database/database_helper.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/ui/home/home_page.dart';
 
 const _themeModeKey = 'theme_mode';
+const _localeKey = 'app_locale';
 
 class LocalModelApp extends ConsumerWidget {
   const LocalModelApp({super.key});
@@ -12,12 +15,21 @@ class LocalModelApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
     return MaterialApp(
       title: 'Shiba',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
+      locale: locale,
+      localizationsDelegates: const [
+        S.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: S.supportedLocales,
       home: const _AppBootstrapPage(),
     );
   }
@@ -94,12 +106,17 @@ class _AppBootstrapPageState extends State<_AppBootstrapPage> {
                               ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      '正在准备本地推理环境…',
-                      style: TextStyle(
-                        color: colorScheme.outline,
-                        fontSize: 13,
-                      ),
+                    Builder(
+                      builder: (context) {
+                        final l10n = S.of(context);
+                        return Text(
+                          l10n.preparingEnvironment,
+                          style: TextStyle(
+                            color: colorScheme.outline,
+                            fontSize: 13,
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 18),
                     SizedBox(
@@ -128,6 +145,7 @@ class _BootstrapError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = S.of(context);
     return Scaffold(
       body: Center(
         child: Padding(
@@ -137,7 +155,7 @@ class _BootstrapError extends StatelessWidget {
             children: [
               Icon(Icons.error_outline, size: 48, color: colorScheme.error),
               const SizedBox(height: 12),
-              Text('启动失败', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.bootFailed, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
                 error,
@@ -173,5 +191,57 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   Future<void> setThemeMode(ThemeMode mode) async {
     state = mode;
     await DatabaseHelper.instance.setSetting(_themeModeKey, mode.name);
+  }
+}
+
+/// Supported app locales with display names.
+class AppLocale {
+  final Locale locale;
+  final String displayName;
+  const AppLocale(this.locale, this.displayName);
+}
+
+const supportedAppLocales = [
+  AppLocale(Locale('zh'), '简体中文'),
+  AppLocale(Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'), '繁體中文'),
+  AppLocale(Locale('en'), 'English'),
+  AppLocale(Locale('fr'), 'Français'),
+  AppLocale(Locale('de'), 'Deutsch'),
+];
+
+final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>(
+    (ref) => LocaleNotifier());
+
+class LocaleNotifier extends StateNotifier<Locale> {
+  LocaleNotifier() : super(const Locale('zh')) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final value = await DatabaseHelper.instance.getSetting(_localeKey);
+    if (value != null) {
+      final locale = _parseLocale(value);
+      if (locale != null) state = locale;
+    }
+  }
+
+  Future<void> setLocale(Locale locale) async {
+    state = locale;
+    await DatabaseHelper.instance.setSetting(_localeKey, _serializeLocale(locale));
+  }
+
+  static String _serializeLocale(Locale locale) {
+    if (locale.scriptCode != null) {
+      return '${locale.languageCode}_${locale.scriptCode}';
+    }
+    return locale.languageCode;
+  }
+
+  static Locale? _parseLocale(String value) {
+    if (value.contains('_')) {
+      final parts = value.split('_');
+      return Locale.fromSubtags(languageCode: parts[0], scriptCode: parts[1]);
+    }
+    return Locale(value);
   }
 }

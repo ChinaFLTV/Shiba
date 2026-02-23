@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shiba/data/models/conversation.dart';
 import 'package:shiba/data/models/local_model.dart';
+import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/providers/chat_providers.dart';
 import 'package:shiba/providers/model_providers.dart';
 import 'package:shiba/ui/chat/chat_page.dart';
@@ -17,11 +18,11 @@ class ChatListPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('对话'),
+        title: Text(S.of(context).conversations),
       ),
       body: conversationsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('加载失败: $e')),
+        error: (e, _) => Center(child: Text(S.of(context).loadFailed('$e'))),
         data: (conversations) {
           if (conversations.isEmpty) {
             return Center(
@@ -31,11 +32,11 @@ class ChatListPage extends ConsumerWidget {
                   Icon(Icons.chat_bubble_outline,
                       size: 80, color: colorScheme.outline.withValues(alpha: 0.4)),
                   const SizedBox(height: 16),
-                  Text('还没有对话',
+                  Text(S.of(context).noConversations,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: colorScheme.outline)),
                   const SizedBox(height: 8),
-                  Text('点击右下角按钮开始新对话',
+                  Text(S.of(context).tapToStartChat,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: colorScheme.outline.withValues(alpha: 0.7))),
                 ],
@@ -55,7 +56,7 @@ class ChatListPage extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _startNewChat(context, ref, localModelsAsync),
         icon: const Icon(Icons.add),
-        label: const Text('新对话'),
+        label: Text(S.of(context).newChat),
       ),
     );
   }
@@ -71,7 +72,7 @@ class ChatListPage extends ConsumerWidget {
 
     if (models.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先下载一个模型'), behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text(S.of(context).pleaseDownloadModel), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -104,7 +105,7 @@ class _ModelSelectionSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('选择模型',
+            Text(S.of(context).selectModel,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             Flexible(
@@ -149,7 +150,7 @@ class _ConversationTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final timeAgo = _formatTimeAgo(conversation.updatedAt);
+    final timeAgo = _formatTimeAgo(S.of(context), conversation.updatedAt);
 
     return Dismissible(
       key: Key(conversation.id),
@@ -168,15 +169,15 @@ class _ConversationTile extends ConsumerWidget {
         return await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('删除对话'),
-            content: const Text('确定要删除这个对话吗？'),
+            title: Text(S.of(context).deleteConversation),
+            content: Text(S.of(context).deleteConversationConfirm),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('取消')),
+                  child: Text(S.of(context).cancel)),
               FilledButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('删除')),
+                  child: Text(S.of(context).delete)),
             ],
           ),
         );
@@ -214,7 +215,7 @@ class _ConversationTile extends ConsumerWidget {
             if (model == null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('模型 ${conversation.modelName} 已被删除，请重新下载'),
+                  content: Text(S.of(context).modelDeleted(conversation.modelName)),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -234,38 +235,39 @@ class _ConversationTile extends ConsumerWidget {
     );
   }
 
-  String _formatTimeAgo(DateTime dateTime) {
+  static String _formatTimeAgo(S l10n, DateTime dateTime) {
     final diff = DateTime.now().difference(dateTime);
-    if (diff.inMinutes < 1) return '刚刚';
-    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
-    if (diff.inDays < 1) return '${diff.inHours}小时前';
-    if (diff.inDays < 30) return '${diff.inDays}天前';
+    if (diff.inMinutes < 1) return l10n.justNow;
+    if (diff.inHours < 1) return l10n.minutesAgo(diff.inMinutes);
+    if (diff.inDays < 1) return l10n.hoursAgo(diff.inHours);
+    if (diff.inDays < 30) return l10n.daysAgo(diff.inDays);
     return '${dateTime.month}/${dateTime.day}';
   }
 
   Future<void> _showRenameDialog(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController(text: conversation.title);
+    final l10n = S.of(context);
     final newTitle = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('重命名对话'),
+        title: Text(l10n.renameConversation),
         content: TextField(
           controller: controller,
           autofocus: true,
           maxLength: 30,
-          decoration: const InputDecoration(
-            hintText: '输入新标题',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            hintText: l10n.enterNewTitle,
+            border: const OutlineInputBorder(),
           ),
           onSubmitted: (value) => Navigator.pop(ctx, value.trim()),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消')),
+              child: Text(l10n.cancel)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('确定')),
+              child: Text(l10n.confirm)),
         ],
       ),
     );
