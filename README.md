@@ -88,6 +88,7 @@
   <img src="https://raw.githubusercontent.com/ChinaFLTV/Shiba/main/docs/screenshots/screenshot-1.jpg" alt="截图1" width="250">
   <img src="https://raw.githubusercontent.com/ChinaFLTV/Shiba/main/docs/screenshots/screenshot-2.jpg" alt="截图2" width="250">
   <img src="https://raw.githubusercontent.com/ChinaFLTV/Shiba/main/docs/screenshots/screenshot-3.jpg" alt="截图3" width="250">
+  <img src="https://raw.githubusercontent.com/ChinaFLTV/Shiba/main/docs/screenshots/screenshot-4.jpg" alt="截图4" width="250">
 </p>
 
 ## 快速开始
