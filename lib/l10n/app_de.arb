@@ -184,5 +184,24 @@
   "insufficientMemory": "Nicht genügend Speicher, um dieses Modell zu laden",
   "modelNotFound": "Modelldatei nicht gefunden",
   "inferenceErrorGeneric": "Während der Inferenz ist ein Fehler aufgetreten",
-  "databaseError": "Datenbankoperation fehlgeschlagen"
+  "databaseError": "Datenbankoperation fehlgeschlagen",
+
+  "sttListening": "Hört zu...",
+  "sttNotAvailable": "Spracherkennung nicht verfügbar",
+  "sttMicPermissionDenied": "Mikrofonberechtigung verweigert",
+  "sttTooltip": "Spracheingabe",
+  "sttDownloadTitle": "Spracherkennungsmodell herunterladen",
+  "sttDownloadPrompt": "Spracherkennungsmodell noch nicht heruntergeladen (~230 MB).\nJetzt herunterladen?",
+  "sttDownloadModel": "Spracherkennungsmodell herunterladen",
+  "sttDownloadComplete": "Spracherkennungsmodell-Download abgeschlossen",
+  "sttDownloadFailed": "Download fehlgeschlagen, bitte Netzwerk prüfen und erneut versuchen",
+  "sttRecognizing": "Erkennung läuft...",
+  "sttRecognizeFailed": "Spracherkennung fehlgeschlagen, bitte erneut versuchen",
+  "sttModelTitle": "SenseVoice Spracherkennungsmodell",
+  "sttNotDownloaded": "Nicht heruntergeladen · ~230 MB",
+  "sttDownloaded": "Heruntergeladen · {size}",
+  "@sttDownloaded": { "placeholders": { "size": { "type": "String" } } },
+  "sttDeleteTitle": "Spracherkennungsmodell löschen",
+  "sttDeleteContent": "Möchten Sie das Spracherkennungsmodell wirklich löschen?\nSpracheingabe ist bis zum erneuten Download nicht verfügbar.",
+  "sttSection": "Spracherkennung (STT)"
 }

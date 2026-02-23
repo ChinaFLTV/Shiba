@@ -53,6 +53,10 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>需要访问相册以选择图片发送给AI模型进行识别</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>需要使用麦克风进行语音输入，将语音转换为文字发送给AI</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>需要使用语音识别将您的语音转换为文字</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

@@ -8,7 +8,9 @@ import 'package:shiba/l10n/app_localizations.dart';
 import 'package:shiba/providers/chat_defaults_provider.dart';
 import 'package:shiba/providers/image_settings_provider.dart';
 import 'package:shiba/providers/service_providers.dart';
+import 'package:shiba/providers/stt_providers.dart';
 import 'package:shiba/providers/tts_providers.dart';
+import 'package:shiba/ui/shared/stt_download_dialog.dart';
 import 'package:shiba/ui/shared/tts_download_dialog.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -90,6 +92,11 @@ class SettingsPage extends ConsumerWidget {
           const _TtsModelCard(),
           const SizedBox(height: 4),
           const _TtsParamsCard(),
+
+          const SizedBox(height: 16),
+
+          _SectionTitle(title: l10n.sttSection),
+          const _SttModelCard(),
 
           const SizedBox(height: 16),
 
@@ -619,6 +626,104 @@ class _TtsParamsCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _SttModelCard extends ConsumerStatefulWidget {
+  const _SttModelCard();
+
+  @override
+  ConsumerState<_SttModelCard> createState() => _SttModelCardState();
+}
+
+class _SttModelCardState extends ConsumerState<_SttModelCard> {
+  bool _isReady = false;
+  int _modelSize = 0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkStatus();
+  }
+
+  Future<void> _checkStatus() async {
+    final stt = ref.read(sttServiceProvider);
+    final ready = await stt.isModelDownloaded();
+    final size = ready ? await stt.getModelSize() : 0;
+    if (mounted) {
+      setState(() { _isReady = ready; _modelSize = size; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final l10n = S.of(context);
+
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.mic_outlined),
+            title: Text(l10n.sttModelTitle),
+            subtitle: _loading
+                ? Text(l10n.ttsChecking)
+                : _isReady
+                    ? Text(l10n.sttDownloaded(formatBytes(_modelSize)))
+                    : Text(l10n.sttNotDownloaded),
+            trailing: _loading
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : _isReady
+                    ? IconButton(
+                        icon: Icon(Icons.delete_outline, color: colorScheme.error),
+                        tooltip: l10n.sttDeleteTitle,
+                        onPressed: () => _confirmDelete(context),
+                      )
+                    : FilledButton.tonal(
+                        onPressed: () => _startDownload(context),
+                        child: Text(l10n.download),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startDownload(BuildContext context) {
+    final stt = ref.read(sttServiceProvider);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => SttDownloadDialog(
+        sttService: stt,
+        onComplete: () {
+          ref.invalidate(sttModelReadyProvider);
+          _checkStatus();
+        },
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final l10n = S.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.sttDeleteTitle),
+        content: Text(l10n.sttDeleteContent),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.delete)),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final stt = ref.read(sttServiceProvider);
+      await stt.deleteModel();
+      ref.invalidate(sttModelReadyProvider);
+      _checkStatus();
+    }
   }
 }
 

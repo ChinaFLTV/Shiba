@@ -561,4 +561,61 @@ class SEn extends S {
 
   @override
   String get databaseError => 'Database operation failed';
+
+  @override
+  String get sttListening => 'Listening...';
+
+  @override
+  String get sttNotAvailable => 'Speech recognition not available';
+
+  @override
+  String get sttMicPermissionDenied => 'Microphone permission denied';
+
+  @override
+  String get sttTooltip => 'Voice input';
+
+  @override
+  String get sttDownloadTitle => 'Download Speech Recognition Model';
+
+  @override
+  String get sttDownloadPrompt =>
+      'Speech recognition model not yet downloaded (~230MB).\nDownload now?';
+
+  @override
+  String get sttDownloadModel => 'Download Speech Model';
+
+  @override
+  String get sttDownloadComplete =>
+      'Speech recognition model download complete';
+
+  @override
+  String get sttDownloadFailed =>
+      'Download failed, please check your network and retry';
+
+  @override
+  String get sttRecognizing => 'Recognizing...';
+
+  @override
+  String get sttRecognizeFailed => 'Speech recognition failed, please retry';
+
+  @override
+  String get sttModelTitle => 'SenseVoice Speech Recognition Model';
+
+  @override
+  String get sttNotDownloaded => 'Not downloaded · ~230MB';
+
+  @override
+  String sttDownloaded(String size) {
+    return 'Downloaded · $size';
+  }
+
+  @override
+  String get sttDeleteTitle => 'Delete Speech Recognition Model';
+
+  @override
+  String get sttDeleteContent =>
+      'Are you sure you want to delete the speech recognition model?\nVoice input will be unavailable until re-downloaded.';
+
+  @override
+  String get sttSection => 'Speech Recognition (STT)';
 }

@@ -208,5 +208,24 @@
   "insufficientMemory": "内存不足，无法加载该模型",
   "modelNotFound": "模型文件未找到",
   "inferenceErrorGeneric": "推理过程发生错误",
-  "databaseError": "数据库操作失败"
+  "databaseError": "数据库操作失败",
+
+  "sttListening": "正在聆听...",
+  "sttNotAvailable": "语音识别不可用",
+  "sttMicPermissionDenied": "麦克风权限被拒绝",
+  "sttTooltip": "语音输入",
+  "sttDownloadTitle": "下载语音识别模型",
+  "sttDownloadPrompt": "语音识别模型尚未下载（约230MB）。\n是否现在下载？",
+  "sttDownloadModel": "下载语音识别模型",
+  "sttDownloadComplete": "语音识别模型下载完成",
+  "sttDownloadFailed": "下载失败，请检查网络后重试",
+  "sttRecognizing": "识别中...",
+  "sttRecognizeFailed": "语音识别失败，请重试",
+  "sttModelTitle": "SenseVoice 语音识别模型",
+  "sttNotDownloaded": "未下载 · 约230MB",
+  "sttDownloaded": "已下载 · {size}",
+  "@sttDownloaded": { "placeholders": { "size": { "type": "String" } } },
+  "sttDeleteTitle": "删除语音识别模型",
+  "sttDeleteContent": "确定要删除已下载的语音识别模型吗？\n删除后语音输入功能将不可用，需要重新下载。",
+  "sttSection": "语音识别 (STT)"
 }

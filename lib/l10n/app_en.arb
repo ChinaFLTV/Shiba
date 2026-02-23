@@ -184,5 +184,24 @@
   "insufficientMemory": "Insufficient memory to load this model",
   "modelNotFound": "Model file not found",
   "inferenceErrorGeneric": "An error occurred during inference",
-  "databaseError": "Database operation failed"
+  "databaseError": "Database operation failed",
+
+  "sttListening": "Listening...",
+  "sttNotAvailable": "Speech recognition not available",
+  "sttMicPermissionDenied": "Microphone permission denied",
+  "sttTooltip": "Voice input",
+  "sttDownloadTitle": "Download Speech Recognition Model",
+  "sttDownloadPrompt": "Speech recognition model not yet downloaded (~230MB).\nDownload now?",
+  "sttDownloadModel": "Download Speech Model",
+  "sttDownloadComplete": "Speech recognition model download complete",
+  "sttDownloadFailed": "Download failed, please check your network and retry",
+  "sttRecognizing": "Recognizing...",
+  "sttRecognizeFailed": "Speech recognition failed, please retry",
+  "sttModelTitle": "SenseVoice Speech Recognition Model",
+  "sttNotDownloaded": "Not downloaded · ~230MB",
+  "sttDownloaded": "Downloaded · {size}",
+  "@sttDownloaded": { "placeholders": { "size": { "type": "String" } } },
+  "sttDeleteTitle": "Delete Speech Recognition Model",
+  "sttDeleteContent": "Are you sure you want to delete the speech recognition model?\nVoice input will be unavailable until re-downloaded.",
+  "sttSection": "Speech Recognition (STT)"
 }

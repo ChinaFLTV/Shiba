@@ -38,6 +38,9 @@ dependencies:
   sherpa_onnx: ^1.10.30
   audioplayers: ^6.1.0
 
+  # Speech-to-Text (Voice Input) - microphone PCM capture
+  record: ^5.2.0
+
   # UI Utilities
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.2
@@ -49,6 +52,10 @@ dependencies:
   permission_handler: ^11.3.1
   connectivity_plus: ^6.1.1
   image_picker: ^1.1.2
+
+dependency_overrides:
+  record_linux:
+    path: record_linux_fix
 
 dev_dependencies:
   flutter_test:

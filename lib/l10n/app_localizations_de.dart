@@ -570,4 +570,62 @@ class SDe extends S {
 
   @override
   String get databaseError => 'Datenbankoperation fehlgeschlagen';
+
+  @override
+  String get sttListening => 'Hört zu...';
+
+  @override
+  String get sttNotAvailable => 'Spracherkennung nicht verfügbar';
+
+  @override
+  String get sttMicPermissionDenied => 'Mikrofonberechtigung verweigert';
+
+  @override
+  String get sttTooltip => 'Spracheingabe';
+
+  @override
+  String get sttDownloadTitle => 'Spracherkennungsmodell herunterladen';
+
+  @override
+  String get sttDownloadPrompt =>
+      'Spracherkennungsmodell noch nicht heruntergeladen (~230 MB).\nJetzt herunterladen?';
+
+  @override
+  String get sttDownloadModel => 'Spracherkennungsmodell herunterladen';
+
+  @override
+  String get sttDownloadComplete =>
+      'Spracherkennungsmodell-Download abgeschlossen';
+
+  @override
+  String get sttDownloadFailed =>
+      'Download fehlgeschlagen, bitte Netzwerk prüfen und erneut versuchen';
+
+  @override
+  String get sttRecognizing => 'Erkennung läuft...';
+
+  @override
+  String get sttRecognizeFailed =>
+      'Spracherkennung fehlgeschlagen, bitte erneut versuchen';
+
+  @override
+  String get sttModelTitle => 'SenseVoice Spracherkennungsmodell';
+
+  @override
+  String get sttNotDownloaded => 'Nicht heruntergeladen · ~230 MB';
+
+  @override
+  String sttDownloaded(String size) {
+    return 'Heruntergeladen · $size';
+  }
+
+  @override
+  String get sttDeleteTitle => 'Spracherkennungsmodell löschen';
+
+  @override
+  String get sttDeleteContent =>
+      'Möchten Sie das Spracherkennungsmodell wirklich löschen?\nSpracheingabe ist bis zum erneuten Download nicht verfügbar.';
+
+  @override
+  String get sttSection => 'Spracherkennung (STT)';
 }

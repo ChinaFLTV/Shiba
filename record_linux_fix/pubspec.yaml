@@ -1,0 +1,20 @@
+name: record_linux
+description: Local patch for record_linux to fix startStream compatibility.
+version: 0.7.3
+environment:
+  sdk: ^3.3.0
+  flutter: ">=3.16.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  record_platform_interface: ^1.0.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    implements: record
+    platforms:
+      linux:
+        dartPluginClass: RecordLinux

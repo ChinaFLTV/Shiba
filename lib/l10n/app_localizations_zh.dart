@@ -551,6 +551,59 @@ class SZh extends S {
 
   @override
   String get databaseError => '数据库操作失败';
+
+  @override
+  String get sttListening => '正在聆听...';
+
+  @override
+  String get sttNotAvailable => '语音识别不可用';
+
+  @override
+  String get sttMicPermissionDenied => '麦克风权限被拒绝';
+
+  @override
+  String get sttTooltip => '语音输入';
+
+  @override
+  String get sttDownloadTitle => '下载语音识别模型';
+
+  @override
+  String get sttDownloadPrompt => '语音识别模型尚未下载（约230MB）。\n是否现在下载？';
+
+  @override
+  String get sttDownloadModel => '下载语音识别模型';
+
+  @override
+  String get sttDownloadComplete => '语音识别模型下载完成';
+
+  @override
+  String get sttDownloadFailed => '下载失败，请检查网络后重试';
+
+  @override
+  String get sttRecognizing => '识别中...';
+
+  @override
+  String get sttRecognizeFailed => '语音识别失败，请重试';
+
+  @override
+  String get sttModelTitle => 'SenseVoice 语音识别模型';
+
+  @override
+  String get sttNotDownloaded => '未下载 · 约230MB';
+
+  @override
+  String sttDownloaded(String size) {
+    return '已下载 · $size';
+  }
+
+  @override
+  String get sttDeleteTitle => '删除语音识别模型';
+
+  @override
+  String get sttDeleteContent => '确定要删除已下载的语音识别模型吗？\n删除后语音输入功能将不可用，需要重新下载。';
+
+  @override
+  String get sttSection => '语音识别 (STT)';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -1100,4 +1153,57 @@ class SZhHant extends SZh {
 
   @override
   String get databaseError => '資料庫操作失敗';
+
+  @override
+  String get sttListening => '正在聆聽...';
+
+  @override
+  String get sttNotAvailable => '語音辨識不可用';
+
+  @override
+  String get sttMicPermissionDenied => '麥克風權限被拒絕';
+
+  @override
+  String get sttTooltip => '語音輸入';
+
+  @override
+  String get sttDownloadTitle => '下載語音辨識模型';
+
+  @override
+  String get sttDownloadPrompt => '語音辨識模型尚未下載（約230MB）。\n是否現在下載？';
+
+  @override
+  String get sttDownloadModel => '下載語音辨識模型';
+
+  @override
+  String get sttDownloadComplete => '語音辨識模型下載完成';
+
+  @override
+  String get sttDownloadFailed => '下載失敗，請檢查網路後重試';
+
+  @override
+  String get sttRecognizing => '辨識中...';
+
+  @override
+  String get sttRecognizeFailed => '語音辨識失敗，請重試';
+
+  @override
+  String get sttModelTitle => 'SenseVoice 語音辨識模型';
+
+  @override
+  String get sttNotDownloaded => '未下載 · 約230MB';
+
+  @override
+  String sttDownloaded(String size) {
+    return '已下載 · $size';
+  }
+
+  @override
+  String get sttDeleteTitle => '刪除語音辨識模型';
+
+  @override
+  String get sttDeleteContent => '確定要刪除已下載的語音辨識模型嗎？\n刪除後語音輸入功能將不可用，需要重新下載。';
+
+  @override
+  String get sttSection => '語音辨識 (STT)';
 }

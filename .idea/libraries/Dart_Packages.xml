@@ -870,6 +870,48 @@
             </list>
           </value>
         </entry>
+        <entry key="record">
+          <value>
+            <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/record-5.2.1/lib" />
+            </list>
+          </value>
+        </entry>
+        <entry key="record_android">
+          <value>
+            <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/record_android-1.4.5/lib" />
+            </list>
+          </value>
+        </entry>
+        <entry key="record_darwin">
+          <value>
+            <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/record_darwin-1.2.2/lib" />
+            </list>
+          </value>
+        </entry>
+        <entry key="record_platform_interface">
+          <value>
+            <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/record_platform_interface-1.4.0/lib" />
+            </list>
+          </value>
+        </entry>
+        <entry key="record_web">
+          <value>
+            <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/record_web-1.2.2/lib" />
+            </list>
+          </value>
+        </entry>
+        <entry key="record_windows">
+          <value>
+            <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/record_windows-1.0.7/lib" />
+            </list>
+          </value>
+        </entry>
         <entry key="riverpod">
           <value>
             <list>
@@ -1385,6 +1427,12 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/provider-6.1.5+1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/pub_semver-2.2.0/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/pubspec_parse-1.5.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/record-5.2.1/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/record_android-1.4.5/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/record_darwin-1.2.2/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/record_platform_interface-1.4.0/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/record_web-1.2.2/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/record_windows-1.0.7/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/riverpod-2.6.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/riverpod_analyzer_utils-0.5.10/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/riverpod_annotation-2.6.1/lib" />

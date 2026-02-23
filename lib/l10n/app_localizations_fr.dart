@@ -569,4 +569,63 @@ class SFr extends S {
 
   @override
   String get databaseError => 'Échec de l\'opération de base de données';
+
+  @override
+  String get sttListening => 'Écoute en cours...';
+
+  @override
+  String get sttNotAvailable => 'Reconnaissance vocale non disponible';
+
+  @override
+  String get sttMicPermissionDenied => 'Autorisation du microphone refusée';
+
+  @override
+  String get sttTooltip => 'Saisie vocale';
+
+  @override
+  String get sttDownloadTitle =>
+      'Télécharger le modèle de reconnaissance vocale';
+
+  @override
+  String get sttDownloadPrompt =>
+      'Le modèle de reconnaissance vocale n\'est pas encore téléchargé (~230 Mo).\nTélécharger maintenant ?';
+
+  @override
+  String get sttDownloadModel => 'Télécharger le modèle vocal';
+
+  @override
+  String get sttDownloadComplete =>
+      'Téléchargement du modèle de reconnaissance vocale terminé';
+
+  @override
+  String get sttDownloadFailed =>
+      'Échec du téléchargement, vérifiez votre réseau et réessayez';
+
+  @override
+  String get sttRecognizing => 'Reconnaissance en cours...';
+
+  @override
+  String get sttRecognizeFailed =>
+      'Échec de la reconnaissance vocale, veuillez réessayer';
+
+  @override
+  String get sttModelTitle => 'Modèle de reconnaissance vocale SenseVoice';
+
+  @override
+  String get sttNotDownloaded => 'Non téléchargé · ~230 Mo';
+
+  @override
+  String sttDownloaded(String size) {
+    return 'Téléchargé · $size';
+  }
+
+  @override
+  String get sttDeleteTitle => 'Supprimer le modèle de reconnaissance vocale';
+
+  @override
+  String get sttDeleteContent =>
+      'Voulez-vous vraiment supprimer le modèle de reconnaissance vocale ?\nLa saisie vocale sera indisponible jusqu\'au re-téléchargement.';
+
+  @override
+  String get sttSection => 'Reconnaissance vocale (STT)';
 }

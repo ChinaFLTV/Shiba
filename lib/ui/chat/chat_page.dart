@@ -529,6 +529,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 ref.watch(imageSettingsProvider).compressEnabled,
             imageMaxResolution: ref.watch(imageSettingsProvider).maxResolution,
             imageQuality: ref.watch(imageSettingsProvider).quality,
+            sttService: ref.watch(sttServiceProvider),
             onSend: (text, {String? imagePath}) =>
                 _handleSend(text, imagePath: imagePath),
             onStop: () {

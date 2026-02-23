@@ -184,5 +184,24 @@
   "insufficientMemory": "記憶體不足，無法載入該模型",
   "modelNotFound": "模型檔案未找到",
   "inferenceErrorGeneric": "推理過程發生錯誤",
-  "databaseError": "資料庫操作失敗"
+  "databaseError": "資料庫操作失敗",
+
+  "sttListening": "正在聆聽...",
+  "sttNotAvailable": "語音辨識不可用",
+  "sttMicPermissionDenied": "麥克風權限被拒絕",
+  "sttTooltip": "語音輸入",
+  "sttDownloadTitle": "下載語音辨識模型",
+  "sttDownloadPrompt": "語音辨識模型尚未下載（約230MB）。\n是否現在下載？",
+  "sttDownloadModel": "下載語音辨識模型",
+  "sttDownloadComplete": "語音辨識模型下載完成",
+  "sttDownloadFailed": "下載失敗，請檢查網路後重試",
+  "sttRecognizing": "辨識中...",
+  "sttRecognizeFailed": "語音辨識失敗，請重試",
+  "sttModelTitle": "SenseVoice 語音辨識模型",
+  "sttNotDownloaded": "未下載 · 約230MB",
+  "sttDownloaded": "已下載 · {size}",
+  "@sttDownloaded": { "placeholders": { "size": { "type": "String" } } },
+  "sttDeleteTitle": "刪除語音辨識模型",
+  "sttDeleteContent": "確定要刪除已下載的語音辨識模型嗎？\n刪除後語音輸入功能將不可用，需要重新下載。",
+  "sttSection": "語音辨識 (STT)"
 }

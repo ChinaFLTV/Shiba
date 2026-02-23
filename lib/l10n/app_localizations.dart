@@ -1091,6 +1091,108 @@ abstract class S {
   /// In zh, this message translates to:
   /// **'数据库操作失败'**
   String get databaseError;
+
+  /// No description provided for @sttListening.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在聆听...'**
+  String get sttListening;
+
+  /// No description provided for @sttNotAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音识别不可用'**
+  String get sttNotAvailable;
+
+  /// No description provided for @sttMicPermissionDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'麦克风权限被拒绝'**
+  String get sttMicPermissionDenied;
+
+  /// No description provided for @sttTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音输入'**
+  String get sttTooltip;
+
+  /// No description provided for @sttDownloadTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载语音识别模型'**
+  String get sttDownloadTitle;
+
+  /// No description provided for @sttDownloadPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音识别模型尚未下载（约230MB）。\n是否现在下载？'**
+  String get sttDownloadPrompt;
+
+  /// No description provided for @sttDownloadModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载语音识别模型'**
+  String get sttDownloadModel;
+
+  /// No description provided for @sttDownloadComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音识别模型下载完成'**
+  String get sttDownloadComplete;
+
+  /// No description provided for @sttDownloadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败，请检查网络后重试'**
+  String get sttDownloadFailed;
+
+  /// No description provided for @sttRecognizing.
+  ///
+  /// In zh, this message translates to:
+  /// **'识别中...'**
+  String get sttRecognizing;
+
+  /// No description provided for @sttRecognizeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音识别失败，请重试'**
+  String get sttRecognizeFailed;
+
+  /// No description provided for @sttModelTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'SenseVoice 语音识别模型'**
+  String get sttModelTitle;
+
+  /// No description provided for @sttNotDownloaded.
+  ///
+  /// In zh, this message translates to:
+  /// **'未下载 · 约230MB'**
+  String get sttNotDownloaded;
+
+  /// No description provided for @sttDownloaded.
+  ///
+  /// In zh, this message translates to:
+  /// **'已下载 · {size}'**
+  String sttDownloaded(String size);
+
+  /// No description provided for @sttDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除语音识别模型'**
+  String get sttDeleteTitle;
+
+  /// No description provided for @sttDeleteContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定要删除已下载的语音识别模型吗？\n删除后语音输入功能将不可用，需要重新下载。'**
+  String get sttDeleteContent;
+
+  /// No description provided for @sttSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音识别 (STT)'**
+  String get sttSection;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

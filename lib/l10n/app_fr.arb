@@ -184,5 +184,24 @@
   "insufficientMemory": "Mémoire insuffisante pour charger ce modèle",
   "modelNotFound": "Fichier modèle introuvable",
   "inferenceErrorGeneric": "Une erreur s'est produite lors de l'inférence",
-  "databaseError": "Échec de l'opération de base de données"
+  "databaseError": "Échec de l'opération de base de données",
+
+  "sttListening": "Écoute en cours...",
+  "sttNotAvailable": "Reconnaissance vocale non disponible",
+  "sttMicPermissionDenied": "Autorisation du microphone refusée",
+  "sttTooltip": "Saisie vocale",
+  "sttDownloadTitle": "Télécharger le modèle de reconnaissance vocale",
+  "sttDownloadPrompt": "Le modèle de reconnaissance vocale n'est pas encore téléchargé (~230 Mo).\nTélécharger maintenant ?",
+  "sttDownloadModel": "Télécharger le modèle vocal",
+  "sttDownloadComplete": "Téléchargement du modèle de reconnaissance vocale terminé",
+  "sttDownloadFailed": "Échec du téléchargement, vérifiez votre réseau et réessayez",
+  "sttRecognizing": "Reconnaissance en cours...",
+  "sttRecognizeFailed": "Échec de la reconnaissance vocale, veuillez réessayer",
+  "sttModelTitle": "Modèle de reconnaissance vocale SenseVoice",
+  "sttNotDownloaded": "Non téléchargé · ~230 Mo",
+  "sttDownloaded": "Téléchargé · {size}",
+  "@sttDownloaded": { "placeholders": { "size": { "type": "String" } } },
+  "sttDeleteTitle": "Supprimer le modèle de reconnaissance vocale",
+  "sttDeleteContent": "Voulez-vous vraiment supprimer le modèle de reconnaissance vocale ?\nLa saisie vocale sera indisponible jusqu'au re-téléchargement.",
+  "sttSection": "Reconnaissance vocale (STT)"
 }
